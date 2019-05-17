@@ -4,4 +4,20 @@ version = "0.0.0"
 authors = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
 edition = "2018"
 
-[dependencies]
+[features]
+default = ["aktoro-runtime"]
+
+[dependencies.aktoro-actor]
+version = "*"
+git     = "https://github.com/aktoro-rs/aktoro-actor"
+branch  = "traits"
+
+[dependencies.aktoro-runtime]
+version  = "*"
+git      = "https://github.com/aktoro-rs/aktoro-runtime"
+branch   = "initial"
+optional = true
+
+[dev-dependencies]
+futures-util-preview = "0.3.0-alpha.16"
+runtime              = "0.3.0-alpha.4"
