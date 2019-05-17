@@ -1,0 +1,34 @@
+language: rust
+rust:
+  - nightly
+sudo: false
+cache: cargo
+
+matrix:
+  include:
+    - name: cargo test
+      rust: nightly
+      script:
+        - cargo test --all
+
+    - name: cargo clippy
+      rust: nightly
+      script:
+        - if rustup component add clippy; then
+            cargo clippy --all-targets --all-features -- -D warnings;
+          else
+            echo "Skipping...";
+          fi
+
+    - name: cargo build
+      rust: nightly
+      script:
+        - cargo build --all
+
+    - name: cargo doc
+      rust: nightly
+      script:
+        - cargo doc --all --no-deps --all-features
+
+notifications:
+  email: false
