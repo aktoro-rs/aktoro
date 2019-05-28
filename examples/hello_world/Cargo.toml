@@ -1,0 +1,15 @@
+[package]
+name    = "hello_world"
+version = "0.0.0"
+license = "MIT"
+authors = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
+edition = "2018"
+
+[dependencies]
+futures-core-preview = "0.3.0-alpha.16"
+futures-util-preview = "0.3.0-alpha.16"
+runtime              = "0.3.0-alpha.4"
+
+[dependencies.aktoro]
+path    = "../.."
+version = "0.1.0-alpha.1"
