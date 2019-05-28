@@ -1,25 +1,18 @@
 use futures_core::future::BoxFuture;
+use futures_core::Stream;
 
 use crate::actor::Actor;
 use crate::actor::Handler;
+use crate::message::Message;
 
-pub trait Sender<A: Actor> {
-    fn send<M>(&mut self, msg: M) -> BoxFuture<<A as Handler<M>>::Output>
+pub trait Sender<A: Actor>: Clone {
+    type Error;
+
+    fn send<M>(&mut self, msg: M) -> Result<BoxFuture<Result<A::Output, Self::Error>>, Self::Error>
     where
-        A: Handler<M>;
+        A: Handler<M>,
+        M: Send + 'static;
 }
 
-pub trait Receiver<A: Actor> {
-    type Sender: Sender<A>;
-
-    fn try_recv<M>(&mut self) -> Option<(M, &mut Respond<A, M>)>
-    where
-        A: Handler<M>;
-}
-
-pub trait Respond<A: Actor, M>
-where
-    A: Handler<M>
-{
-    fn respond(&mut self, resp: A::Output);
-}
+// TODO: required trait?
+pub trait Receiver<A: Actor>: Stream<Item = Box<Message<Actor = A>>> {}

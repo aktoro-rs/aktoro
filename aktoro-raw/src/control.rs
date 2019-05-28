@@ -1,17 +1,22 @@
 use futures_core::future::BoxFuture;
+use futures_core::Stream;
 
-pub trait Controller {
-    type Action;
-    type Status;
+use crate::actor::Actor;
 
-    fn send(&mut self, action: Self::Action) -> BoxFuture<Self::Status>;
+pub trait Controller<A: Actor>: Clone {
+    type Error;
+
+    fn send(
+        &mut self,
+        action: A::Action,
+    ) -> Result<BoxFuture<Result<A::Status, Self::Error>>, Self::Error>;
 }
 
-pub trait Controlled {
-    type Controller: Controller;
+// TODO: required trait?
+pub trait Controlled<A: Actor>: Stream<Item = Box<Update<A>>> {}
 
-    fn try_recv(&mut self) -> Option<(
-        <Self::Controller as Controller>::Action,
-        <Self::Controller as Controller>::Status
-    )>;
+pub trait Update<A: Actor>: Send {
+    fn action(&self) -> &A::Action;
+
+    fn update(&mut self, status: A::Status); // TODO: Result?
 }
