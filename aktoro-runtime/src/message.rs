@@ -4,6 +4,7 @@ use aktoro_raw as raw;
 pub(crate) struct Message<A, M>
 where
     A: raw::Handler<M>,
+    M: Send + 'static,
 {
     msg: Option<M>,
     resp: once::Sender<A::Output>,
@@ -12,6 +13,7 @@ where
 impl<A, M> Message<A, M>
 where
     A: raw::Handler<M>,
+    M: Send + 'static,
 {
     pub(crate) fn new(msg: M) -> (Self, once::Receiver<A::Output>) {
         let (sender, recver) = once::new();
@@ -35,7 +37,7 @@ where
 
     fn handle(&mut self, actor: &mut A, ctx: &mut A::Context) {
         if let Some(msg) = self.msg.take() {
-            self.resp.send(actor.handle(msg, ctx)).ok().unwrap(); // FIXME
+            self.resp.send(actor.handle(msg, ctx)); // TODO: handle
         }
     }
 }

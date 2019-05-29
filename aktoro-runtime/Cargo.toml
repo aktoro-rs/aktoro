@@ -9,6 +9,8 @@ edition = "2018"
 fnv                  = "1.0"
 futures-core-preview = "0.3.0-alpha.16"
 futures-util-preview = "0.3.0-alpha.16"
+rand_core            = "0.4"
+rand_xoshiro         = "0.2"
 runtime              = "0.3.0-alpha.4" # TODO: https://github.com/rustasync/runtime/pull/34
 
 [dependencies.aktoro-channel]

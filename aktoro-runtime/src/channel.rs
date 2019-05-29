@@ -12,7 +12,7 @@ use crate::message::Message;
 
 pub struct Sender<A: raw::Actor>(channel::Sender<Box<raw::Message<Actor = A>>>);
 
-pub(crate) struct Receiver<A: raw::Actor>(channel::Receiver<Box<raw::Message<Actor = A>>>);
+pub struct Receiver<A: raw::Actor>(channel::Receiver<Box<raw::Message<Actor = A>>>);
 
 pub(crate) fn new<A: raw::Actor>() -> (Sender<A>, Receiver<A>) {
     let (sender, recver) = channel::unbounded(); // TODO: bounded OR unbounded
@@ -24,12 +24,14 @@ impl<A> raw::Sender<A> for Sender<A>
 where
     A: raw::Actor,
 {
+    type Receiver = Receiver<A>;
+
     type Error = (); // FIXME
 
     fn send<M>(&mut self, msg: M) -> Result<BoxFuture<Result<A::Output, ()>>, ()>
     where
         A: raw::Handler<M>,
-        M: Send + 'static,
+        M: Send,
     {
         let (msg, recv) = Message::new(msg);
 
