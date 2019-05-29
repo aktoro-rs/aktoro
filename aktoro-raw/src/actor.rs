@@ -3,39 +3,14 @@ use crate::context::Context;
 pub trait Actor: Unpin + Send + Sized + 'static {
     type Context: Context<Self>;
 
-    type Action: Action + Send;
-    type Event: Event + Send;
-    type Status: Status + Send;
+    type Status: Status + Unpin;
 
-    fn on_action(&mut self, action: Self::Action, ctx: &mut Self::Context) -> Self::Status {
-        Status::running()
-    }
-
-    fn on_event(&mut self, event: Self::Event, ctx: &mut Self::Context) -> Self::Status {
-        Status::running()
-    }
+    // TODO: starting
+    // TODO: started
+    // TODO: stopping
+    // TODO: stopped
 }
 
-pub trait Action {} // TODO
+pub trait Status: Default + Send {} // TODO
 
-pub trait Event {} // TODO
-
-pub trait Status {
-    fn running() -> Self;
-} // TODO
-
-pub trait Handler<M>: Actor {
-    type Output: Send;
-
-    fn handle(&mut self, msg: M, ctx: &mut Self::Context) -> Self::Output;
-}
-
-impl Action for () {}
-
-impl Event for () {}
-
-impl Status for bool {
-    fn running() -> bool {
-        true
-    }
-}
+impl Status for () {}
