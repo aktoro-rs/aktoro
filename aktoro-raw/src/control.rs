@@ -10,7 +10,7 @@ pub trait Controller<A: Actor>: Clone {
 
     type Error;
 
-    fn send<D>(&mut self, action: D) -> Result<BoxFuture<Result<(), Self::Error>>, Self::Error>
+    fn send<D>(&mut self, action: D) -> Result<BoxFuture<Result<A::Output, Self::Error>>, Self::Error>
     where
         A: ActionHandler<D>,
         D: Send + 'static;
