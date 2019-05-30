@@ -19,6 +19,14 @@ pub(crate) struct Actor<A: raw::Actor> {
     killing: Killing,
 }
 
+#[derive(Eq, PartialEq)]
+pub enum Status {
+    Starting,
+    Running,
+    Stopping,
+    Stopped,
+}
+
 pub(crate) struct Kill(once::Sender<()>);
 
 #[derive(Clone)]
@@ -28,13 +36,28 @@ pub(crate) struct Killed(channel::Receiver<u64>); // TODO: err?
 
 pub(crate) fn new<A: raw::Actor>(
     id: u64,
-    actor: A,
-    killing: Killing,
-    ctx: A::Context,
-) -> (Actor<A>, Kill) {
+    mut actor: A,
+    mut killing: Killing,
+    mut ctx: A::Context,
+) -> Option<(Actor<A>, Kill)> {
+    actor.starting(&mut ctx);
+
+    if ctx.status().is_stopping() {
+        actor.stopping(&mut ctx);
+    }
+
+    if ctx.status().is_stopping() {
+        actor.stopped(&mut ctx);
+        killing.0.send(id).unwrap(); // FIXME
+        return None;
+    } else if ctx.status().is_stopped() {
+        killing.0.send(id).unwrap(); // FIXME
+        return None;
+    }
+
     let (_kill, kill) = once::new();
 
-    (
+    Some((
         Actor {
             id,
             act: actor,
@@ -44,13 +67,23 @@ pub(crate) fn new<A: raw::Actor>(
             killing,
         },
         Kill(_kill),
-    )
+    ))
 }
 
 pub(crate) fn new_kill() -> (Killing, Killed) {
     let (killing, killed) = channel::unbounded(); // TODO: bounded OR unbounded
 
     (Killing(killing), Killed(killed))
+}
+
+impl raw::Status for Status {
+    fn is_stopping(&self) -> bool {
+        self == &Status::Stopping
+    }
+
+    fn is_stopped(&self) -> bool {
+        self == &Status::Stopped
+    }
 }
 
 impl<A: raw::Actor> Future for Actor<A> {
@@ -132,5 +165,11 @@ impl Stream for Killed {
 
     fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<u64>> {
         Pin::new(&mut self.get_mut().0).poll_next(ctx)
+    }
+}
+
+impl Default for Status {
+    fn default() -> Status {
+        Status::Starting
     }
 }

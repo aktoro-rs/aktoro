@@ -8,6 +8,7 @@ mod message;
 mod runtime;
 mod update;
 
+pub use crate::actor::Status;
 pub use crate::channel::*;
 pub use crate::context::Context;
 pub use crate::control::*;

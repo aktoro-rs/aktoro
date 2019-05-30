@@ -49,11 +49,11 @@ impl raw::Runtime for Runtime {
     fn spawn<A: raw::Actor>(
         &mut self,
         actor: A,
-    ) -> (
+    ) -> Result<(
         <A::Context as raw::Context<A>>::Controller,
         <A::Context as raw::Context<A>>::Sender,
         <<A::Context as raw::Context<A>>::Updater as raw::Updater<A>>::Updated,
-    ) {
+    ), ()> {
         let mut ctx = A::Context::new();
 
         let ctrler = ctx.controller().clone();
@@ -62,13 +62,17 @@ impl raw::Runtime for Runtime {
 
         let id = self.rng.next_u64();
 
-        let (actor, kill) = actor::new(id, actor, self.killing.clone(), ctx);
+        let (actor, kill) = if let Some((actor, kill)) = actor::new(id, actor, self.killing.clone(), ctx) {
+            (actor, kill)
+        } else {
+            return Err(()); // FIXME
+        };
 
         self.actors.insert(id, kill);
 
         runtime::spawn(actor);
 
-        (ctrler, sender, updted)
+        Ok((ctrler, sender, updted))
     }
 
     fn stop(mut self) -> Stop {
