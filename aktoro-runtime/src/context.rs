@@ -6,6 +6,8 @@ use std::task::Poll;
 
 use aktoro_raw as raw;
 use aktoro_raw::Context as AkContext;
+use aktoro_raw::Status as AkStatus;
+use aktoro_raw::Updater as AkUpdater;
 use futures_core::Stream;
 
 use crate::channel;
@@ -20,8 +22,8 @@ use crate::update::Updated;
 use crate::update::Updater;
 
 pub struct Context<A: raw::Actor> {
-    kill: bool,
     status: A::Status,
+    update: bool,
     ctrler: Controller<A>,
     ctrled: Controlled<A>,
     events: VecDeque<Box<raw::EventMessage<Actor = A>>>,
@@ -46,8 +48,8 @@ where
         let (updter, updted) = update::new();
 
         Context {
-            kill: false,
             status: Default::default(),
+            update: false,
             ctrler,
             ctrled,
             events: VecDeque::new(), // TODO: with_capacity?
@@ -57,14 +59,6 @@ where
             updted: Some(updted),
             _actor: PhantomData,
         }
-    }
-
-    fn kill(&mut self) {
-        self.kill = true;
-    }
-
-    fn killed(&self) -> bool {
-        self.kill
     }
 
     fn emit<E>(&mut self, event: E)
@@ -80,7 +74,11 @@ where
     }
 
     fn update(&mut self, status: A::Status) {
-        self.status = status;
+        if self.status != status {
+            self.status = status;
+            self.updter.send(self.status.clone()).unwrap(); // FIXME
+            self.update = true; // TODO: some events only?
+        }
     }
 
     fn controller(&self) -> &Controller<A> {
@@ -117,16 +115,20 @@ where
     fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<raw::Work<A>>> {
         let context = self.get_mut();
 
-        if context.kill {
-            return Poll::Ready(None);
-        }
-
         match Pin::new(&mut context.ctrled).poll_next(ctx) {
             Poll::Ready(Some(update)) => {
                 return Poll::Ready(Some(raw::Work::Action(update)));
             }
-            Poll::Ready(None) => context.kill(),
+            Poll::Ready(None) => {
+                context.update(A::Status::stopped());
+                return Poll::Ready(None);
+            }
             Poll::Pending => (),
+        }
+
+        if context.update {
+            context.update = false;
+            return Poll::Ready(Some(raw::Work::Update));
         }
 
         if let Some(event) = context.events.pop_front() {
@@ -137,7 +139,10 @@ where
             Poll::Ready(Some(msg)) => {
                 return Poll::Ready(Some(raw::Work::Message(msg)));
             }
-            Poll::Ready(None) => context.kill(),
+            Poll::Ready(None) => {
+                context.update(A::Status::stopped());
+                return Poll::Ready(None);
+            }
             Poll::Pending => (),
         }
 

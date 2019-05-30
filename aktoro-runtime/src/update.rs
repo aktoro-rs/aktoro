@@ -25,7 +25,7 @@ where
     type Error = ();
 
     fn send(&mut self, status: A::Status) -> Result<(), ()> {
-        self.0.send(status).ok().unwrap(); // FIXME
+        self.0.send(status).ok(); // TODO: handle err
 
         Ok(())
     }

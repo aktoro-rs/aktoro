@@ -19,10 +19,10 @@ pub(crate) struct Actor<A: raw::Actor> {
     killing: Killing,
 }
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Clone)]
 pub enum Status {
     Starting,
-    Running,
+    Started,
     Stopping,
     Stopped,
 }
@@ -36,18 +36,20 @@ pub(crate) struct Killed(channel::Receiver<u64>); // TODO: err?
 
 pub(crate) fn new<A: raw::Actor>(
     id: u64,
-    mut actor: A,
+    mut act: A,
     mut killing: Killing,
     mut ctx: A::Context,
 ) -> Option<(Actor<A>, Kill)> {
-    actor.starting(&mut ctx);
+    ctx.update(A::Status::starting());
+    act.starting(&mut ctx);
 
     if ctx.status().is_stopping() {
-        actor.stopping(&mut ctx);
+        act.stopping(&mut ctx);
     }
 
     if ctx.status().is_stopping() {
-        actor.stopped(&mut ctx);
+        ctx.update(A::Status::stopped());
+        act.stopped(&mut ctx);
         killing.0.send(id).unwrap(); // FIXME
         return None;
     } else if ctx.status().is_stopped() {
@@ -60,7 +62,7 @@ pub(crate) fn new<A: raw::Actor>(
     Some((
         Actor {
             id,
-            act: actor,
+            act,
             ctx,
             started: false,
             kill,
@@ -77,6 +79,30 @@ pub(crate) fn new_kill() -> (Killing, Killed) {
 }
 
 impl raw::Status for Status {
+    fn starting() -> Status {
+        Status::Starting
+    }
+
+    fn started() -> Status {
+        Status::Started
+    }
+
+    fn stopping() -> Status {
+        Status::Stopping
+    }
+
+    fn stopped() -> Status {
+        Status::Stopped
+    }
+
+    fn is_starting(&self) -> bool {
+        self == &Status::Starting
+    }
+
+    fn is_started(&self) -> bool {
+        self == &Status::Started
+    }
+
     fn is_stopping(&self) -> bool {
         self == &Status::Stopping
     }
@@ -93,12 +119,6 @@ impl<A: raw::Actor> Future for Actor<A> {
         let actor = self.get_mut();
 
         loop {
-            if actor.ctx.killed() {
-                actor.act.stopped(&mut actor.ctx);
-                actor.killing.0.send(actor.id).unwrap(); // FIXME
-                return Poll::Ready(());
-            }
-
             match Pin::new(&mut actor.kill).poll(ctx) {
                 Poll::Ready(Ok(())) => {
                     actor.act.stopped(&mut actor.ctx);
@@ -118,6 +138,7 @@ impl<A: raw::Actor> Future for Actor<A> {
             }
 
             if actor.ctx.status().is_stopping() {
+                actor.ctx.update(A::Status::stopped());
                 actor.act.stopped(&mut actor.ctx);
                 actor.killing.0.send(actor.id).unwrap(); // FIXME
                 return Poll::Ready(());
@@ -127,6 +148,7 @@ impl<A: raw::Actor> Future for Actor<A> {
             }
 
             if !actor.started {
+                actor.ctx.update(A::Status::started());
                 actor.act.started(&mut actor.ctx);
                 actor.started = true;
                 continue;
@@ -136,16 +158,21 @@ impl<A: raw::Actor> Future for Actor<A> {
                 Poll::Ready(Some(work)) => match work {
                     raw::Work::Action(mut action) => {
                         action.handle(&mut actor.act, &mut actor.ctx).ok().unwrap(); // FIXME
+                        continue;
                     }
                     raw::Work::Event(mut event) => {
                         event.handle(&mut actor.act, &mut actor.ctx).ok().unwrap(); // FIXME
+                        continue;
                     }
                     raw::Work::Message(mut msg) => {
                         msg.handle(&mut actor.act, &mut actor.ctx).ok().unwrap(); // FIXME
+                        continue;
                     }
+                    raw::Work::Update => continue,
                 },
                 Poll::Ready(None) => {
-                    actor.ctx.kill();
+                    actor.ctx.update(A::Status::stopped());
+                    actor.act.stopped(&mut actor.ctx);
                     continue;
                 }
                 Poll::Pending => return Poll::Pending,
