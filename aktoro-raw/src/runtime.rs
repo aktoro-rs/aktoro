@@ -13,11 +13,11 @@ pub trait Runtime {
     fn spawn<A: Actor>(
         &mut self,
         actor: A,
-    ) -> (
+    ) -> Result<(
         <A::Context as Context<A>>::Controller,
         <A::Context as Context<A>>::Sender,
         <<A::Context as Context<A>>::Updater as Updater<A>>::Updated,
-    );
+    ), Self::Error>;
 
     fn stop(self) -> Self::Stop;
 
