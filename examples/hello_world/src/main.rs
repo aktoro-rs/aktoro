@@ -1,34 +1,45 @@
 #![feature(async_await)]
 
 use aktoro::prelude::*;
-use aktoro::raw::ActionHandler;
-use aktoro::raw::Actor;
-use aktoro::raw::Handler;
 use aktoro::*;
 
 struct HelloActor;
 
 struct Hello(&'static str);
+struct Bye(&'static str);
 
 struct Kill;
 
 impl Actor for HelloActor {
     type Context = Context<Self>;
 
-    type Status = ();
+    type Status = Status;
+
+    type Error = ();
 }
 
 impl Handler<Hello> for HelloActor {
     type Output = String;
 
-    fn handle(&mut self, msg: Hello, _: &mut Context<Self>) -> String {
-        format!("Hello, {}!", msg.0)
+    fn handle(&mut self, msg: Hello, _: &mut Context<Self>) -> Result<String, ()> {
+        Ok(format!("Hello, {}!", msg.0))
+    }
+}
+
+impl Handler<Bye> for HelloActor {
+    type Output = String;
+
+    fn handle(&mut self, msg: Bye, _: &mut Context<Self>) -> Result<String, ()> {
+        Ok(format!("Bye, {}!", msg.0))
     }
 }
 
 impl ActionHandler<Kill> for HelloActor {
-    fn handle(&mut self, _: Kill, ctx: &mut Context<Self>) {
-        ctx.kill();
+    type Output = ();
+
+    fn handle(&mut self, _: Kill, ctx: &mut Context<Self>) -> Result<(), ()> {
+        ctx.update(Status::Stopped);
+        Ok(())
     }
 }
 
@@ -36,7 +47,7 @@ impl ActionHandler<Kill> for HelloActor {
 async fn main() {
     let mut rt = Runtime::init();
 
-    let (ctrler, sender, _) = rt.spawn(HelloActor);
+    let (ctrler, sender, _) = rt.spawn(HelloActor).unwrap();
 
     runtime::spawn(run("World", ctrler, sender));
 
@@ -44,11 +55,18 @@ async fn main() {
 }
 
 async fn run(
-    hello: &'static str,
+    name: &'static str,
     mut ctrler: Controller<HelloActor>,
     mut sender: Sender<HelloActor>,
 ) {
-    let msg = Hello(hello);
+    let msg = Hello(name);
+
+    let req = sender.send(msg).unwrap();
+    let resp = req.await.unwrap();
+
+    println!("{}", resp);
+
+    let msg = Bye(name);
 
     let req = sender.send(msg).unwrap();
     let resp = req.await.unwrap();
