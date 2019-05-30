@@ -107,7 +107,7 @@ impl Future for Wait {
                 Poll::Ready(Some(actor)) => {
                     rt.actors.remove(&actor).unwrap(); // FIXME
                 }
-                Poll::Ready(None) => unimplemented!(), // FIXME
+                Poll::Ready(None) => return Poll::Ready(Ok(())),
                 Poll::Pending => return Poll::Pending,
             }
         }

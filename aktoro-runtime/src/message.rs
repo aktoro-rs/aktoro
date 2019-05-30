@@ -35,9 +35,11 @@ where
 {
     type Actor = A;
 
-    fn handle(&mut self, actor: &mut A, ctx: &mut A::Context) {
+    fn handle(&mut self, actor: &mut A, ctx: &mut A::Context) -> Result<(), A::Error> {
         if let Some(msg) = self.msg.take() {
-            self.resp.send(actor.handle(msg, ctx)); // TODO: handle
+            self.resp.send(actor.handle(msg, ctx)?).ok().unwrap(); // FIXME
         }
+
+        Ok(())
     }
 }

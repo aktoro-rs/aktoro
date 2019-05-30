@@ -1,9 +1,11 @@
+use std::collections::VecDeque;
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::Context as FutContext;
 use std::task::Poll;
 
 use aktoro_raw as raw;
+use aktoro_raw::Context as AkContext;
 use futures_core::Stream;
 
 use crate::channel;
@@ -22,7 +24,7 @@ pub struct Context<A: raw::Actor> {
     status: A::Status,
     ctrler: Controller<A>,
     ctrled: Controlled<A>,
-    events: Vec<Box<raw::EventMessage<Actor = A>>>,
+    events: VecDeque<Box<raw::EventMessage<Actor = A>>>,
     sender: Sender<A>,
     recver: Receiver<A>,
     updter: Updater<A>,
@@ -48,7 +50,7 @@ where
             status: Default::default(),
             ctrler,
             ctrled,
-            events: vec![],
+            events: VecDeque::new(), // TODO: with_capacity?
             sender,
             recver,
             updter,
@@ -70,7 +72,7 @@ where
         A: raw::EventHandler<E>,
         E: Send + 'static,
     {
-        self.events.push(Box::new(EventMessage::new(event)));
+        self.events.push_back(Box::new(EventMessage::new(event)));
     }
 
     fn status(&self) -> &A::Status {
@@ -123,20 +125,21 @@ where
             Poll::Ready(Some(update)) => {
                 return Poll::Ready(Some(raw::Work::Action(update)));
             }
-            Poll::Ready(None) => unimplemented!(), // FIXME
+            Poll::Ready(None) => context.kill(),
             Poll::Pending => (),
+        }
+
+        if let Some(event) = context.events.pop_front() {
+            return Poll::Ready(Some(raw::Work::Event(event)));
         }
 
         match Pin::new(&mut context.recver).poll_next(ctx) {
             Poll::Ready(Some(msg)) => {
                 return Poll::Ready(Some(raw::Work::Message(msg)));
             }
-            Poll::Ready(None) => unimplemented!(), // FIXME
+            Poll::Ready(None) => context.kill(),
             Poll::Pending => (),
         }
-
-        // TODO: event
-        // TODO: local actions
 
         Poll::Pending
     }

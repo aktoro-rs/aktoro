@@ -25,7 +25,9 @@ where
     type Error = ();
 
     fn send(&mut self, status: A::Status) -> Result<(), ()> {
-        unimplemented!(); // FIXME
+        self.0.send(status).ok().unwrap(); // FIXME
+
+        Ok(())
     }
 }
 
@@ -38,6 +40,6 @@ where
     type Item = A::Status;
 
     fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<A::Status>> {
-        unimplemented!(); // FIXME
+        Pin::new(&mut self.get_mut().0).poll_next(ctx)
     }
 }

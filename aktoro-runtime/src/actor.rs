@@ -6,13 +6,15 @@ use std::task::Poll;
 use aktoro_channel::channel;
 use aktoro_channel::once;
 use aktoro_raw as raw;
-use aktoro_raw::Context;
+use aktoro_raw::Context as AkContext;
+use aktoro_raw::Status as AkStatus;
 use futures_core::Stream;
 
 pub(crate) struct Actor<A: raw::Actor> {
     id: u64,
     act: A,
     ctx: A::Context,
+    started: bool,
     kill: once::Receiver<()>,
     killing: Killing,
 }
@@ -20,9 +22,9 @@ pub(crate) struct Actor<A: raw::Actor> {
 pub(crate) struct Kill(once::Sender<()>);
 
 #[derive(Clone)]
-pub(crate) struct Killing(channel::Sender<u64>);
+pub(crate) struct Killing(channel::Sender<u64>); // TODO: err?
 
-pub(crate) struct Killed(channel::Receiver<u64>);
+pub(crate) struct Killed(channel::Receiver<u64>); // TODO: err?
 
 pub(crate) fn new<A: raw::Actor>(
     id: u64,
@@ -37,6 +39,7 @@ pub(crate) fn new<A: raw::Actor>(
             id,
             act: actor,
             ctx,
+            started: false,
             kill,
             killing,
         },
@@ -58,28 +61,60 @@ impl<A: raw::Actor> Future for Actor<A> {
 
         loop {
             if actor.ctx.killed() {
+                actor.act.stopped(&mut actor.ctx);
                 actor.killing.0.send(actor.id).unwrap(); // FIXME
-
                 return Poll::Ready(());
             }
 
             match Pin::new(&mut actor.kill).poll(ctx) {
                 Poll::Ready(Ok(())) => {
+                    actor.act.stopped(&mut actor.ctx);
                     actor.killing.0.send(actor.id).unwrap(); // FIXME
-
                     return Poll::Ready(());
                 }
-                Poll::Ready(Err(_)) => unimplemented!(), // FIXME
+                Poll::Ready(Err(_)) => { // TODO: handle err
+                    actor.act.stopped(&mut actor.ctx);
+                    actor.killing.0.send(actor.id).unwrap(); // FIXME
+                    return Poll::Ready(());
+                }
                 Poll::Pending => (),
+            }
+
+            if actor.ctx.status().is_stopping() {
+                actor.act.stopping(&mut actor.ctx);
+            }
+
+            if actor.ctx.status().is_stopping() {
+                actor.act.stopped(&mut actor.ctx);
+                actor.killing.0.send(actor.id).unwrap(); // FIXME
+                return Poll::Ready(());
+            } else if actor.ctx.status().is_stopped() {
+                actor.killing.0.send(actor.id).unwrap(); // FIXME
+                return Poll::Ready(());
+            }
+
+            if !actor.started {
+                actor.act.started(&mut actor.ctx);
+                actor.started = true;
+                continue;
             }
 
             match Pin::new(&mut actor.ctx).poll_next(ctx) {
                 Poll::Ready(Some(work)) => match work {
-                    raw::Work::Action(mut action) => action.handle(&mut actor.act, &mut actor.ctx),
-                    raw::Work::Event(mut event) => event.handle(&mut actor.act, &mut actor.ctx),
-                    raw::Work::Message(mut msg) => msg.handle(&mut actor.act, &mut actor.ctx),
+                    raw::Work::Action(mut action) => {
+                        action.handle(&mut actor.act, &mut actor.ctx).ok().unwrap(); // FIXME
+                    }
+                    raw::Work::Event(mut event) => {
+                        event.handle(&mut actor.act, &mut actor.ctx).ok().unwrap(); // FIXME
+                    }
+                    raw::Work::Message(mut msg) => {
+                        msg.handle(&mut actor.act, &mut actor.ctx).ok().unwrap(); // FIXME
+                    }
                 },
-                Poll::Ready(None) => unimplemented!(), // FIXME
+                Poll::Ready(None) => {
+                    actor.ctx.kill();
+                    continue;
+                }
                 Poll::Pending => return Poll::Pending,
             }
         }

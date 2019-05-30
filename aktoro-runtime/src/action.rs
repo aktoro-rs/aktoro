@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use aktoro_channel::once;
 use aktoro_raw as raw;
 
@@ -9,11 +7,10 @@ where
     D: Send + 'static,
 {
     action: Option<D>,
-    resp: once::Sender<()>,
-    _actor: PhantomData<A>,
+    resp: once::Sender<A::Output>,
 }
 
-pub(crate) fn new<A, D>(action: D) -> (ActionMessage<A, D>, once::Receiver<()>)
+pub(crate) fn new<A, D>(action: D) -> (ActionMessage<A, D>, once::Receiver<A::Output>)
 where
     A: raw::ActionHandler<D>,
     D: Send + 'static,
@@ -24,7 +21,6 @@ where
         ActionMessage {
             action: Some(action),
             resp: sender,
-            _actor: PhantomData,
         },
         recver,
     )
@@ -37,9 +33,11 @@ where
 {
     type Actor = A;
 
-    fn handle(&mut self, actor: &mut A, ctx: &mut A::Context) {
+    fn handle(&mut self, actor: &mut A, ctx: &mut A::Context) -> Result<(), A::Error> {
         if let Some(action) = self.action.take() {
-            self.resp.send(actor.handle(action, ctx)); // TODO: handle
+            self.resp.send(actor.handle(action, ctx)?).ok().unwrap(); // FIXME
         }
+
+        Ok(())
     }
 }

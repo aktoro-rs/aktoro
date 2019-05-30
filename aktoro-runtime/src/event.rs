@@ -31,9 +31,11 @@ where
 {
     type Actor = A;
 
-    fn handle(&mut self, actor: &mut A, ctx: &mut A::Context) {
+    fn handle(&mut self, actor: &mut A, ctx: &mut A::Context) -> Result<(), A::Error> {
         if let Some(event) = self.event.take() {
-            actor.handle(event, ctx);
+            actor.handle(event, ctx)?;
         }
+
+        Ok(())
     }
 }

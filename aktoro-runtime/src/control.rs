@@ -28,7 +28,7 @@ where
 
     type Error = (); // FIXME
 
-    fn send<D>(&mut self, action: D) -> Result<BoxFuture<Result<(), ()>>, ()>
+    fn send<D>(&mut self, action: D) -> Result<BoxFuture<Result<A::Output, ()>>, ()>
     where
         A: raw::ActionHandler<D>,
         D: Send + 'static,
