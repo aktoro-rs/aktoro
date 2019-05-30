@@ -20,7 +20,14 @@ pub trait Actor: Unpin + Send + Sized + 'static {
     fn stopped(&mut self, ctx: &mut Self::Context) {}
 }
 
-pub trait Status: Default + Send {
+pub trait Status: PartialEq + Default + Clone + Send {
+    fn starting() -> Self;
+    fn started() -> Self;
+    fn stopping() -> Self;
+    fn stopped() -> Self;
+
+    fn is_starting(&self) -> bool;
+    fn is_started(&self) -> bool;
     fn is_stopping(&self) -> bool;
     fn is_stopped(&self) -> bool;
 }

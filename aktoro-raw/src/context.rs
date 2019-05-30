@@ -16,9 +16,6 @@ pub trait Context<A: Actor>: Unpin + Send + 'static + Stream<Item = Work<A>> {
 
     fn new() -> Self;
 
-    fn kill(&mut self);
-    fn killed(&self) -> bool;
-
     fn emit<E>(&mut self, event: E)
     where
         A: EventHandler<E>,
@@ -40,4 +37,5 @@ pub enum Work<A: Actor> {
     Action(Box<ActionMessage<Actor = A>>),
     Event(Box<EventMessage<Actor = A>>),
     Message(Box<Message<Actor = A>>),
+    Update,
 }
