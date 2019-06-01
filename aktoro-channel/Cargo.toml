@@ -1,19 +1,16 @@
 [package]
 name        = "aktoro-channel"
 description = "Channels for aktoro's internal use."
-version     = "0.1.0-alpha.5"
+version     = "0.1.0-alpha.6"
 license     = "MIT"
 authors     = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
 edition     = "2018"
 
 [dependencies]
-futures-channel-preview = "0.3.0-alpha.16"
-futures-core-preview    = "0.3.0-alpha.16"
-futures-sink-preview    = "0.3.0-alpha.16"
+crossbeam-queue      = "0.1"
+crossbeam-utils      = "0.6"
+futures-core-preview = "0.3.0-alpha.16"
 
 [dev-dependencies]
-runtime = "0.3.0-alpha.4"
-
-[dev-dependencies.futures-util-preview]
-version  = "0.3.0-alpha.16"
-features = ["async-await"]
+futures-util-preview = "0.3.0-alpha.16"
+runtime              = "0.3.0-alpha.4"

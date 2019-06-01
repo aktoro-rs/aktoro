@@ -1,186 +1,159 @@
-#[derive(PartialEq, Eq, Debug)]
-/// The error type that is returned by the channels'
-/// senders when failing to send data.
-pub enum SendError<D> {
-    /// Returned when the channel's buffer is full.
-    Full(D),
-    /// Returned when the sender coudln't send the data
-    /// because it previously disconnected itself from
-    /// the channel.
-    Disconnected(D),
-    /// Returned when the channel has been closed.
-    Closed(D),
+use std::fmt;
+
+#[derive(Eq, PartialEq, Clone)]
+pub struct CloneError {
+    kind: CloneErrorKind,
 }
 
-#[derive(PartialEq, Eq, Debug)]
-/// The error type that is returned by the channels'
-/// receivers when failing to receive data.
-pub enum ReceiveError {
-    /// Returned when the channel's buffer is empty.
-    Empty,
-    /// Returned when the receiver coudln't receive data
-    /// because it previously disconnected itself from
-    /// the channel.
+#[derive(Eq, PartialEq, Clone)]
+pub struct TrySendError<T> {
+    kind: SendErrorKind,
+    msg: T,
+}
+
+#[derive(Eq, PartialEq, Clone)]
+pub struct TryRecvError {
+    kind: RecvErrorKind,
+}
+
+#[derive(Eq, PartialEq, Clone, Debug)]
+pub enum CloneErrorKind {
+    Limit,
     Disconnected,
-    /// Returned when the channel has been closed and
-    /// its buffer is empty.
+}
+
+#[derive(Eq, PartialEq, Clone, Debug)]
+pub enum SendErrorKind {
+    Full,
+    Limit,
+    Disconnected,
     Closed,
 }
 
-#[derive(PartialEq, Eq, Debug)]
-/// The error type that is returned by the channels'
-/// senders and receivers when failing to disconnect
-/// themselves from the channel.
-pub enum DisconnectError {
-    /// Returned when the sender/receiver already
-    /// disconnected itself from the channel.
+#[derive(Eq, PartialEq, Clone, Debug)]
+pub enum RecvErrorKind {
     Disconnected,
-    /// Returned when the channel has already
-    /// been closed.
     Closed,
 }
 
-#[derive(PartialEq, Eq, Debug)]
-/// The error type that is returned by the channels'
-/// senders and receivers when failing to close the
-/// channel.
-pub enum CloseError {
-    /// Returned when the sender/receiver already
-    /// disconnected itself from the channel.
-    Disconnected,
-    /// Returned when the channel has already
-    /// been closed.
-    Closed,
-}
-
-impl<D> SendError<D> {
-    /// Returns a reference to the data that the
-    /// sender was trying to send over the channel.
-    pub fn inner(&self) -> &D {
-        match self {
-            SendError::Full(data) => data,
-            SendError::Disconnected(data) => data,
-            SendError::Closed(data) => data,
+impl CloneError {
+    pub(crate) fn limit() -> Self {
+        CloneError {
+            kind: CloneErrorKind::Limit,
         }
     }
 
-    /// Returns a mutable reference to the data
-    /// that the sender was trying to send over
-    /// the channel.
-    pub fn inner_mut(&mut self) -> &mut D {
-        match self {
-            SendError::Full(data) => data,
-            SendError::Disconnected(data) => data,
-            SendError::Closed(data) => data,
+    pub(crate) fn disconnected() -> Self {
+        CloneError {
+            kind: CloneErrorKind::Disconnected,
         }
     }
 
-    /// Returns the data that the sender was trying
-    /// to send over the channel.
-    pub fn into_inner(self) -> D {
-        match self {
-            SendError::Full(data) => data,
-            SendError::Disconnected(data) => data,
-            SendError::Closed(data) => data,
-        }
-    }
-
-    /// Maps a `SendError<D>` to a `SendError<E>` by
-    /// applying a function to the inner value.
-    pub fn map_inner<E, F>(self, op: F) -> SendError<E>
-    where
-        F: FnOnce(D) -> E,
-    {
-        match self {
-            SendError::Full(data) => SendError::Full(op(data)),
-            SendError::Disconnected(data) => SendError::Disconnected(op(data)),
-            SendError::Closed(data) => SendError::Closed(op(data)),
-        }
-    }
-
-    /// Whether the sender failed to send data
-    /// because the channel's buffer was full.
     pub fn is_full(&self) -> bool {
-        if let SendError::Full(_) = self {
-            true
-        } else {
-            false
-        }
+        self.kind == CloneErrorKind::Limit
     }
 
-    /// Whether the sender failed to send data
-    /// because it already disconnected itself from
-    /// the channel.
     pub fn is_disconnected(&self) -> bool {
-        if let SendError::Disconnected(_) = self {
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Whether the sender failed to send data
-    /// because the channel has been closed.
-    pub fn is_closed(&self) -> bool {
-        if let SendError::Closed(_) = self {
-            true
-        } else {
-            false
-        }
+        self.kind == CloneErrorKind::Disconnected
     }
 }
 
-impl ReceiveError {
-    /// Whether the receiver failed to receive
-    /// data because the channel's buffer is
-    /// empty.
-    pub fn is_empty(&self) -> bool {
-        *self == ReceiveError::Empty
+impl<T> TrySendError<T> {
+    pub(crate) fn full(msg: T) -> Self {
+        TrySendError {
+            kind: SendErrorKind::Full,
+            msg,
+        }
     }
 
-    /// Whether the receiver failed to receive
-    /// data because it already disconnected itself
-    /// from the channel.
+    pub(crate) fn limit(msg: T) -> Self {
+        TrySendError {
+            kind: SendErrorKind::Limit,
+            msg,
+        }
+    }
+
+    pub(crate) fn disconnected(msg: T) -> Self {
+        TrySendError {
+            kind: SendErrorKind::Disconnected,
+            msg,
+        }
+    }
+
+    pub(crate) fn closed(msg: T) -> Self {
+        TrySendError {
+            kind: SendErrorKind::Closed,
+            msg,
+        }
+    }
+
+    pub fn is_full(&self) -> bool {
+        self.kind == SendErrorKind::Full
+    }
+
+    pub fn is_limit(&self) -> bool {
+        self.kind == SendErrorKind::Limit
+    }
+
     pub fn is_disconnected(&self) -> bool {
-        *self == ReceiveError::Disconnected
+        self.kind == SendErrorKind::Disconnected
     }
 
-    /// Whether the receiver failed to receive
-    /// data because the channel has been closed
-    /// and its buffer empty.
     pub fn is_closed(&self) -> bool {
-        *self == ReceiveError::Closed
+        self.kind == SendErrorKind::Closed
+    }
+
+    pub fn msg(&self) -> &T {
+        &self.msg
+    }
+
+    pub fn into_msg(self) -> T {
+        self.msg
     }
 }
 
-impl DisconnectError {
-    /// Whether the sender/receiver failed to
-    /// disconnect itself from the channel because
-    /// it was already disconnected.
-    pub fn is_disconnected(&self) -> bool {
-        *self == DisconnectError::Disconnected
+impl TryRecvError {
+    pub(crate) fn disconnected() -> Self {
+        TryRecvError {
+            kind: RecvErrorKind::Disconnected,
+        }
     }
 
-    /// Whether the sender/receiver failed to
-    /// disconnect itself from the channel because
-    /// the channel has been closed.
+    pub(crate) fn closed() -> Self {
+        TryRecvError {
+            kind: RecvErrorKind::Closed,
+        }
+    }
+
+    pub fn is_disconnected(&self) -> bool {
+        self.kind == RecvErrorKind::Disconnected
+    }
+
     pub fn is_closed(&self) -> bool {
-        *self == DisconnectError::Closed
+        self.kind == RecvErrorKind::Closed
     }
 }
 
-impl CloseError {
-    /// Whether the sender/receiver failed to
-    /// close the channel because it already
-    /// disconnected itself from it.
-    pub fn is_disconnected(&self) -> bool {
-        *self == CloseError::Disconnected
+impl fmt::Debug for CloneError {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("CloneError")
+            .field("kind", &self.kind)
+            .finish()
     }
+}
 
-    /// Whether the sender/receiver failed to
-    /// close the channel because it was
-    /// already closed.
-    pub fn is_closed(&self) -> bool {
-        *self == CloseError::Closed
+impl fmt::Debug for TryRecvError {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("TryRecvError")
+            .field("kind", &self.kind)
+            .finish()
+    }
+}
+
+impl<T> fmt::Debug for TrySendError<T> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("TrySendError")
+            .field("kind", &self.kind)
+            .finish()
     }
 }
