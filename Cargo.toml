@@ -7,7 +7,14 @@ authors     = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
 edition     = "2018"
 
 [features]
-default = ["aktoro-runtime"]
+default = ["context", "runtime"]
+context = ["aktoro-context"]
+runtime = ["aktoro-runtime"]
+
+[dependencies.aktoro-context]
+path     = "aktoro-context"
+version  = "0.1.0-alpha.1"
+optional = true
 
 [dependencies.aktoro-raw]
 path    = "aktoro-raw"
@@ -23,6 +30,8 @@ members = [
 	".",
 	"aktoro-channel",
 	"aktoro-raw",
+
+	"aktoro-context",
 	"aktoro-runtime",
 
 	"examples/hello_world",
