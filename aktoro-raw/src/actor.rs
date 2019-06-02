@@ -1,3 +1,5 @@
+use std::error::Error as StdError;
+
 use crate::context::Context;
 
 pub trait Actor: Unpin + Send + Sized + 'static {
@@ -5,7 +7,7 @@ pub trait Actor: Unpin + Send + Sized + 'static {
 
     type Status: Status + Unpin;
 
-    type Error;
+    type Error: StdError + Send;
 
     #[allow(unused)]
     fn starting(&mut self, ctx: &mut Self::Context) {}
@@ -25,9 +27,11 @@ pub trait Status: PartialEq + Default + Clone + Send {
     fn started() -> Self;
     fn stopping() -> Self;
     fn stopped() -> Self;
+    fn dead() -> Self;
 
     fn is_starting(&self) -> bool;
     fn is_started(&self) -> bool;
     fn is_stopping(&self) -> bool;
     fn is_stopped(&self) -> bool;
+    fn is_dead(&self) -> bool;
 }

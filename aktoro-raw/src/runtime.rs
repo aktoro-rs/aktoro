@@ -1,23 +1,16 @@
+use std::error::Error as StdError;
 use std::future::Future;
 
 use crate::actor::Actor;
-use crate::context::Context;
-use crate::update::Updater;
+use crate::spawned::Spawned;
 
 pub trait Runtime {
     type Stop: Future<Output = Result<(), Self::Error>>;
     type Wait: Future<Output = Result<(), Self::Error>>;
 
-    type Error;
+    type Error: StdError;
 
-    fn spawn<A: Actor>(
-        &mut self,
-        actor: A,
-    ) -> Result<(
-        <A::Context as Context<A>>::Controller,
-        <A::Context as Context<A>>::Sender,
-        <<A::Context as Context<A>>::Updater as Updater<A>>::Updated,
-    ), Self::Error>;
+    fn spawn<A: Actor>(&mut self, actor: A) -> Option<Spawned<A>>;
 
     fn stop(self) -> Self::Stop;
 

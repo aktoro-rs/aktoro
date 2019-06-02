@@ -1,11 +1,11 @@
 use futures_core::Stream;
 
-use crate::action::ActionMessage;
+use crate::action::Action;
 use crate::actor::Actor;
 use crate::channel::Sender;
 use crate::control::Controller;
+use crate::event::Event;
 use crate::event::EventHandler;
-use crate::event::EventMessage;
 use crate::message::Message;
 use crate::update::Updater;
 
@@ -22,10 +22,13 @@ pub trait Context<A: Actor>: Unpin + Send + 'static + Stream<Item = Work<A>> {
         E: Send + 'static;
 
     fn status(&self) -> &A::Status;
-    fn update(&mut self, status: A::Status);
+    fn set_status(&mut self, status: A::Status);
+    fn update(&mut self) -> Result<(), <Self::Updater as Updater<A>>::Error>;
 
     fn controller(&self) -> &Self::Controller;
     fn sender(&self) -> &Self::Sender;
+
+    fn updated_ref(&mut self) -> Option<&mut <Self::Updater as Updater<A>>::Updated>;
     fn updated(&mut self) -> Option<<Self::Updater as Updater<A>>::Updated>;
 
     fn controlled(&mut self) -> &mut <Self::Controller as Controller<A>>::Controlled;
@@ -34,8 +37,8 @@ pub trait Context<A: Actor>: Unpin + Send + 'static + Stream<Item = Work<A>> {
 }
 
 pub enum Work<A: Actor> {
-    Action(Box<ActionMessage<Actor = A>>),
-    Event(Box<EventMessage<Actor = A>>),
+    Action(Box<Action<Actor = A>>),
+    Event(Box<Event<Actor = A>>),
     Message(Box<Message<Actor = A>>),
     Update,
 }
