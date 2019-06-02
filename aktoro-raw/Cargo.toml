@@ -1,9 +1,9 @@
 [package]
-name = "aktoro-raw"
-version = "0.1.0"
+name    = "aktoro-raw"
+version = "0.1.0-alpha.1"
+license = "MIT"
 authors = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+futures-core-preview = "0.3.0-alpha.16"
