@@ -1,7 +1,6 @@
 #![feature(async_await)]
 
 use aktoro::prelude::*;
-use aktoro::*;
 
 struct HelloActor;
 
@@ -15,13 +14,13 @@ impl Actor for HelloActor {
 
     type Status = Status;
 
-    type Error = ();
+    type Error = Error;
 }
 
 impl Handler<Hello> for HelloActor {
     type Output = String;
 
-    fn handle(&mut self, msg: Hello, _: &mut Context<Self>) -> Result<String, ()> {
+    fn handle(&mut self, msg: Hello, _: &mut Context<Self>) -> Result<String, Error> {
         Ok(format!("Hello, {}!", msg.0))
     }
 }
@@ -29,7 +28,7 @@ impl Handler<Hello> for HelloActor {
 impl Handler<Bye> for HelloActor {
     type Output = String;
 
-    fn handle(&mut self, msg: Bye, _: &mut Context<Self>) -> Result<String, ()> {
+    fn handle(&mut self, msg: Bye, _: &mut Context<Self>) -> Result<String, Error> {
         Ok(format!("Bye, {}!", msg.0))
     }
 }
@@ -37,42 +36,38 @@ impl Handler<Bye> for HelloActor {
 impl ActionHandler<Kill> for HelloActor {
     type Output = ();
 
-    fn handle(&mut self, _: Kill, ctx: &mut Context<Self>) -> Result<(), ()> {
-        ctx.update(Status::Stopped);
+    fn handle(&mut self, _: Kill, ctx: &mut Context<Self>) -> Result<(), Error> {
+        ctx.set_status(Status::Stopped);
         Ok(())
     }
 }
 
 #[runtime::main]
 async fn main() {
-    let mut rt = Runtime::init();
+    let mut rt = Runtime::new();
 
-    let (ctrler, sender, _) = rt.spawn(HelloActor).unwrap();
+    let spawned = rt.spawn(HelloActor).unwrap();
 
-    runtime::spawn(run("World", ctrler, sender));
+    runtime::spawn(run("World", spawned));
 
     rt.wait().await.unwrap();
 }
 
-async fn run(
-    name: &'static str,
-    mut ctrler: Controller<HelloActor>,
-    mut sender: Sender<HelloActor>,
-) {
+async fn run(name: &'static str, mut spawned: Spawned<HelloActor>) {
     let msg = Hello(name);
 
-    let req = sender.send(msg).unwrap();
+    let req = spawned.try_send_msg(msg).unwrap();
     let resp = req.await.unwrap();
 
     println!("{}", resp);
 
     let msg = Bye(name);
 
-    let req = sender.send(msg).unwrap();
+    let req = spawned.try_send_msg(msg).unwrap();
     let resp = req.await.unwrap();
 
     println!("{}", resp);
 
-    let req = ctrler.send(Kill).unwrap();
+    let req = spawned.try_send_action(Kill).unwrap();
     req.await.unwrap();
 }
