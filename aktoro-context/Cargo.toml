@@ -1,9 +1,10 @@
 [package]
-name    = "aktoro-context"
-version = "0.1.0-alpha.1"
-license = "MIT"
-authors = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
-edition = "2018"
+name        = "aktoro-context"
+description = "aktoro's context default implementation"
+version     = "0.1.0-alpha.1"
+license     = "MIT"
+authors     = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
+edition     = "2018"
 
 [dependencies]
 crossbeam-utils      = "0.6"

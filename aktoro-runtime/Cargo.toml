@@ -1,9 +1,10 @@
 [package]
-name    = "aktoro-runtime"
-version = "0.1.0-alpha.1"
-license = "MIT"
-authors = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
-edition = "2018"
+name        = "aktoro-runtime"
+description = "aktoro's runtime default implementation"
+version     = "0.1.0-alpha.1"
+license     = "MIT"
+authors     = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
+edition     = "2018"
 
 [dependencies]
 fnv                  = "1.0"
