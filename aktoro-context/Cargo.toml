@@ -13,7 +13,7 @@ futures-util-preview = "0.3.0-alpha.16"
 
 [dependencies.aktoro-channel]
 path    = "../aktoro-channel"
-version = "0.1.0-alpha.5"
+version = "0.1.0-alpha.6"
 
 [dependencies.aktoro-raw]
 path    = "../aktoro-raw"
