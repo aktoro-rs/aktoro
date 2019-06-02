@@ -26,7 +26,9 @@ impl<T> Channel<T> {
             return Err(TrySendError::limit(msg.msg));
         }
 
-        self.queue.push(msg).map_err(|msg| TrySendError::full(msg.msg))?;
+        self.queue
+            .push(msg)
+            .map_err(|msg| TrySendError::full(msg.msg))?;
 
         self.notify();
 

@@ -17,11 +17,13 @@ struct Inner {
 }
 
 impl Notify {
-    pub(crate) fn new() -> Self {
-        Notify(Arc::new(Inner {
+    pub fn new() -> (Self, Self) {
+        let inner = Arc::new(Inner {
             done: AtomicBool::new(false),
             waker: AtomicCell::new(None),
-        }))
+        });
+
+        (Notify(inner.clone()), Notify(inner))
     }
 
     pub fn is_done(&self) -> bool {
@@ -32,16 +34,12 @@ impl Notify {
         self.0.waker.store(Some(waker));
     }
 
-    pub(crate) fn done(self) {
+    pub fn done(self) {
         self.0.done.store(true, Ordering::SeqCst);
 
         if let Some(waker) = self.0.waker.swap(None) {
             waker.wake();
         }
-    }
-
-    pub(crate) fn clone(&self) -> Self {
-        Notify(self.0.clone())
     }
 }
 

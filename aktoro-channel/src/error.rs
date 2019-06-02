@@ -1,6 +1,10 @@
+use std::error::Error as StdError;
 use std::fmt;
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::fmt::Formatter;
 
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub struct CloneError {
     kind: CloneErrorKind,
 }
@@ -11,7 +15,7 @@ pub struct TrySendError<T> {
     msg: T,
 }
 
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub struct TryRecvError {
     kind: RecvErrorKind,
 }
@@ -134,24 +138,47 @@ impl TryRecvError {
     }
 }
 
-impl fmt::Debug for CloneError {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("CloneError")
-            .field("kind", &self.kind)
-            .finish()
+impl StdError for CloneError {}
+
+impl<T> StdError for TrySendError<T> {}
+
+impl StdError for TryRecvError {}
+
+impl Display for CloneError {
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        match self.kind {
+            CloneErrorKind::Limit => write!(fmt, "clone failed because limit reached",),
+            CloneErrorKind::Disconnected => {
+                write!(fmt, "clone failed because already disconnected",)
+            }
+        }
     }
 }
 
-impl fmt::Debug for TryRecvError {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("TryRecvError")
-            .field("kind", &self.kind)
-            .finish()
+impl<T> Display for TrySendError<T> {
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        match self.kind {
+            SendErrorKind::Full => write!(fmt, "send failed because channel full",),
+            SendErrorKind::Limit => write!(fmt, "send failed because limit reached",),
+            SendErrorKind::Disconnected => write!(fmt, "send failed because already disconnected",),
+            SendErrorKind::Closed => write!(fmt, "send failed because channel closed",),
+        }
     }
 }
 
-impl<T> fmt::Debug for TrySendError<T> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for TryRecvError {
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        match self.kind {
+            RecvErrorKind::Disconnected => {
+                write!(fmt, "receive failed because already disconnected",)
+            }
+            RecvErrorKind::Closed => write!(fmt, "receive failed because channel closed",),
+        }
+    }
+}
+
+impl<T> Debug for TrySendError<T> {
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         fmt.debug_struct("TrySendError")
             .field("kind", &self.kind)
             .finish()

@@ -16,9 +16,9 @@ impl<T> Message<T> {
         (
             Message {
                 msg,
-                notify: Some(notify.clone()),
+                notify: Some(notify.0),
             },
-            notify,
+            notify.1,
         )
     }
 

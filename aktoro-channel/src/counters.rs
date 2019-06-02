@@ -30,7 +30,7 @@ impl Counters {
 
     pub(crate) fn add_msg(&self) -> Result<(), ()> {
         if let Some(counter) = &self.cmsgs {
-            let limit = self.lmsgs.clone().unwrap();
+            let limit = self.lmsgs.unwrap();
 
             loop {
                 let cur = counter.load(Ordering::SeqCst);
