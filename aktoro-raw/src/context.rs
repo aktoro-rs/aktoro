@@ -37,8 +37,8 @@ pub trait Context<A: Actor>: Unpin + Send + 'static + Stream<Item = Work<A>> {
 }
 
 pub enum Work<A: Actor> {
-    Action(Box<Action<Actor = A>>),
-    Event(Box<Event<Actor = A>>),
-    Message(Box<Message<Actor = A>>),
+    Action(Box<dyn Action<Actor = A>>),
+    Event(Box<dyn Event<Actor = A>>),
+    Message(Box<dyn Message<Actor = A>>),
     Update,
 }

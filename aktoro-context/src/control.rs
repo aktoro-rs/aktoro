@@ -10,9 +10,9 @@ use futures_util::FutureExt;
 
 use crate::action::Action;
 
-pub struct Controller<A: raw::Actor>(channel::Sender<Box<raw::Action<Actor = A>>>);
+pub struct Controller<A: raw::Actor>(channel::Sender<Box<dyn raw::Action<Actor = A>>>);
 
-pub struct Controlled<A: raw::Actor>(channel::Receiver<Box<raw::Action<Actor = A>>>);
+pub struct Controlled<A: raw::Actor>(channel::Receiver<Box<dyn raw::Action<Actor = A>>>);
 
 pub(crate) fn new<A: raw::Actor>() -> (Controller<A>, Controlled<A>) {
     let (sender, recver) = channel::Builder::new()
@@ -31,7 +31,7 @@ where
 {
     type Controlled = Controlled<A>;
 
-    type Error = TrySendError<Box<raw::Action<Actor = A>>>;
+    type Error = TrySendError<Box<dyn raw::Action<Actor = A>>>;
 
     fn try_send<D>(&mut self, action: D) -> raw::ControllerRes<A::Output, Self::Error>
     where
@@ -52,12 +52,12 @@ impl<A> Stream for Controlled<A>
 where
     A: raw::Actor,
 {
-    type Item = Box<raw::Action<Actor = A>>;
+    type Item = Box<dyn raw::Action<Actor = A>>;
 
     fn poll_next(
         self: Pin<&mut Self>,
         ctx: &mut FutContext,
-    ) -> Poll<Option<Box<raw::Action<Actor = A>>>> {
+    ) -> Poll<Option<Box<dyn raw::Action<Actor = A>>>> {
         Pin::new(&mut self.get_mut().0).poll_next(ctx)
     }
 }

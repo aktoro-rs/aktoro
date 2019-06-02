@@ -20,4 +20,4 @@ pub trait Sender<A: Actor>: Clone {
         M: Send;
 }
 
-pub trait Receiver<A: Actor>: Stream<Item = Box<Message<Actor = A>>> {}
+pub trait Receiver<A: Actor>: Stream<Item = Box<dyn Message<Actor = A>>> {}

@@ -20,4 +20,4 @@ pub trait Controller<A: Actor>: Clone {
         D: Send + 'static;
 }
 
-pub trait Controlled<A: Actor>: Stream<Item = Box<Action<Actor = A>>> {}
+pub trait Controlled<A: Actor>: Stream<Item = Box<dyn Action<Actor = A>>> {}

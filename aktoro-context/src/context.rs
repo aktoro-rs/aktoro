@@ -24,7 +24,7 @@ pub struct Context<A: raw::Actor> {
     ctrler: Controller<A>,
     ctrled: Controlled<A>,
     update: bool,
-    events: VecDeque<Box<raw::Event<Actor = A>>>,
+    events: VecDeque<Box<dyn raw::Event<Actor = A>>>,
     sender: Sender<A>,
     recver: Receiver<A>,
     updter: Updater<A>,

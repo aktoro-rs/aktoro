@@ -11,7 +11,7 @@ pub struct Error {
 #[derive(Debug)]
 pub enum ErrorKind {
     AlreadyRemoved(u64),
-    Std(Box<StdError + Send>),
+    Std(Box<dyn StdError + Send>),
     Multiple(Vec<Error>),
 }
 

@@ -10,9 +10,9 @@ use futures_util::FutureExt;
 
 use crate::message::Message;
 
-pub struct Sender<A: raw::Actor>(channel::Sender<Box<raw::Message<Actor = A>>>);
+pub struct Sender<A: raw::Actor>(channel::Sender<Box<dyn raw::Message<Actor = A>>>);
 
-pub struct Receiver<A: raw::Actor>(channel::Receiver<Box<raw::Message<Actor = A>>>);
+pub struct Receiver<A: raw::Actor>(channel::Receiver<Box<dyn raw::Message<Actor = A>>>);
 
 pub(crate) fn new<A: raw::Actor>() -> (Sender<A>, Receiver<A>) {
     let (sender, recver) = channel::Builder::new()
@@ -31,7 +31,7 @@ where
 {
     type Receiver = Receiver<A>;
 
-    type Error = TrySendError<Box<raw::Message<Actor = A>>>;
+    type Error = TrySendError<Box<dyn raw::Message<Actor = A>>>;
 
     fn try_send<M>(&mut self, msg: M) -> raw::SenderRes<A::Output, Self::Error>
     where
@@ -52,7 +52,7 @@ impl<A> Stream for Receiver<A>
 where
     A: raw::Actor,
 {
-    type Item = Box<raw::Message<Actor = A>>;
+    type Item = Box<dyn raw::Message<Actor = A>>;
 
     fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<Self::Item>> {
         Pin::new(&mut self.get_mut().0).poll_next(ctx)
