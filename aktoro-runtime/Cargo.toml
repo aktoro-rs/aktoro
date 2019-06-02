@@ -8,14 +8,13 @@ edition = "2018"
 [dependencies]
 fnv                  = "1.0"
 futures-core-preview = "0.3.0-alpha.16"
-futures-util-preview = "0.3.0-alpha.16"
-rand_core            = "0.4"
+rand                 = "0.6"
 rand_xoshiro         = "0.2"
 runtime              = "0.3.0-alpha.4" # TODO: https://github.com/rustasync/runtime/pull/34
 
 [dependencies.aktoro-channel]
 path    = "../aktoro-channel"
-version = "0.1.0-alpha.5"
+version = "0.1.0-alpha.6"
 
 [dependencies.aktoro-raw]
 path    = "../aktoro-raw"
