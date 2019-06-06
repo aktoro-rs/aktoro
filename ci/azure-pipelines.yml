@@ -3,8 +3,8 @@ jobs:
     pool: Default
     container: aktoro/archlinux-rust:latest
     steps:
-      - bash: rustup default stable
-        displayName: 'Setup rust (stable)'
+      - bash: rustup default nightly
+        displayName: 'Setup rust (nightly)'
       - bash: cargo build --all --all-features --verbose
         displayName: 'Build (debug)'
       - bash: cargo test --all --all-features --verbose
