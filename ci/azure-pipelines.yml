@@ -1,0 +1,15 @@
+jobs:
+  - job: test
+    pool: Default
+    container: aktoro/archlinux-rust:latest
+    steps:
+      - bash: rustup default stable
+        displayName: 'Setup rust (stable)'
+      - bash: cargo build --all --all-features --verbose
+        displayName: 'Build (debug)'
+      - bash: cargo test --all --all-features --verbose
+        displayName: 'Test'
+      - bash: |
+          rustup component add clippy
+          cargo clippy --all-target --all-features -- -D warnings
+        displayName: 'Clippy'
