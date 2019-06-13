@@ -11,5 +11,6 @@ pub trait Event: Send {
 }
 
 pub trait EventHandler<E: Send + 'static>: Actor {
+    /// Handles the event.
     fn handle(&mut self, event: E, ctx: &mut Self::Context) -> Result<(), Self::Error>;
 }

@@ -9,6 +9,8 @@ pub trait Updater<A: Actor> {
 
     type Error: StdError + Send;
 
+    /// Tries to send a status update over
+    /// the actor's update channel.
     fn try_send(&mut self, status: A::Status) -> Result<(), Self::Error>;
 }
 

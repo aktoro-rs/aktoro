@@ -13,5 +13,7 @@ pub trait Action: Send {
 pub trait ActionHandler<A: Send + 'static>: Actor {
     type Output: Send;
 
+    /// Handles the action, returning a result
+    /// eventually containing the action's output.
     fn handle(&mut self, action: A, ctx: &mut Self::Context) -> Result<Self::Output, Self::Error>;
 }
