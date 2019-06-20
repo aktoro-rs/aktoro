@@ -22,6 +22,9 @@ type ControllerError<A> = <Controller<A> as RawController<A>>::Error;
 
 type Updated<A> = <<<A as Actor>::Context as Context<A>>::Updater as Updater<A>>::Updated;
 
+/// A wrapper around an actor's
+/// message, control and update
+/// channels.
 pub struct Spawned<A: Actor> {
     sender: Sender<A>,
     ctrler: Controller<A>,
@@ -31,11 +34,6 @@ pub struct Spawned<A: Actor> {
 impl<A: Actor> Spawned<A> {
     /// Creates a new `Spawned` struct from an actor's
     /// context.
-    ///
-    /// ## Note
-    ///
-    /// This should only be used by a runtime after
-    /// an actor has finished starting.
     pub fn new(ctx: &mut A::Context) -> Spawned<A> {
         Spawned {
             sender: ctx.sender().clone(),
