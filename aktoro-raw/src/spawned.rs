@@ -59,7 +59,7 @@ impl<A: Actor> Spawned<A> {
 
     /// Tries send an action over the actor's
     /// control channel, returning a future resolving
-    /// with the result returned by the action 
+    /// with the result returned by the action
     /// handler.
     pub fn try_send_action<D>(&mut self, action: D) -> ControllerRes<A::Output, ControllerError<A>>
     where

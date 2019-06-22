@@ -38,7 +38,7 @@ impl Error {
     }
 
     pub(crate) fn add_err(self, err: Error) -> Error {
-        let mut error;
+        let error;
         match (self.kind, err.kind) {
             (ErrorKind::Multiple(mut errs), ErrorKind::Multiple(mut errs_)) => {
                 errs.append(&mut errs_);
