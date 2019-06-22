@@ -19,15 +19,28 @@ use crate::update;
 use crate::update::Updated;
 use crate::update::Updater;
 
+/// An actor context using the [`aktoro-channel`] crate.
+///
+/// [`aktoro-channel`]: https://docs.rs/aktoro-channel
 pub struct Context<A: raw::Actor> {
+    /// The actor's current status.
     status: A::Status,
+    /// An actor's control channel sender.
     ctrler: Controller<A>,
+    /// An actor's control channel receiver.
     ctrled: Controlled<A>,
+    /// Whether the status has been recently updated
+    /// and the runtime should be notified.
     update: bool,
+    /// A list of the actor's unhandled events.
     events: VecDeque<Box<dyn raw::Event<Actor = A>>>,
+    /// An actor's message channel sender.
     sender: Sender<A>,
+    /// An actor's message channel receiver.
     recver: Receiver<A>,
+    /// An actor's update channel sender.
     updter: Updater<A>,
+    /// An actor's update channel receiver.
     updted: Option<Updated<A>>,
 }
 
@@ -40,6 +53,8 @@ where
     type Updater = Updater<A>;
 
     fn new() -> Context<A> {
+        // We create the actor's control, message and
+        // update channels.
         let (ctrler, ctrled) = control::new();
         let (sender, recver) = channel::new();
         let (updter, updted) = update::new();
@@ -119,6 +134,9 @@ where
     fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<raw::Work<A>>> {
         let context = self.get_mut();
 
+        // If an action has been received an action has
+        // been received from the actor's control channel,
+        // we ask the runtime to make the actor handle it.
         match Pin::new(&mut context.ctrled).poll_next(ctx) {
             Poll::Ready(Some(update)) => {
                 return Poll::Ready(Some(raw::Work::Action(update)));
@@ -127,15 +145,23 @@ where
             Poll::Pending => (),
         }
 
+        // If the actor's status has been recently updated,
+        // we notify the runtime.
         if context.update {
             context.update = false;
             return Poll::Ready(Some(raw::Work::Update));
         }
 
+        // If the actor has unhandled events, we ask the
+        // runtime to make the actor handle the oldest
+        // one.
         if let Some(event) = context.events.pop_front() {
             return Poll::Ready(Some(raw::Work::Event(event)));
         }
 
+        // If a message has been received from the actor's
+        // message channel, we ask the runtime to make
+        // the runtime handle it.
         match Pin::new(&mut context.recver).poll_next(ctx) {
             Poll::Ready(Some(msg)) => {
                 return Poll::Ready(Some(raw::Work::Message(msg)));

@@ -10,11 +10,24 @@ use futures_util::FutureExt;
 
 use crate::action::Action;
 
+/// An actor's control channel sender, used
+/// by [`Context`].
+///
+/// [`Context`]: struct.Context.html
 pub struct Controller<A: raw::Actor>(channel::Sender<Box<dyn raw::Action<Actor = A>>>);
 
+/// An actor's control channel receiver,
+/// used by [`Context`].
+///
+/// [`Context`]: struct.Context.html
 pub struct Controlled<A: raw::Actor>(channel::Receiver<Box<dyn raw::Action<Actor = A>>>);
 
+/// Creates a new control channel for the
+/// specified actor type, returning a sender
+/// and receiver connected to it.
 pub(crate) fn new<A: raw::Actor>() -> (Controller<A>, Controlled<A>) {
+    // TODO: maybe allow the channel's configuration
+    // to be specified.
     let (sender, recver) = channel::Builder::new()
         .unbounded()
         .unlimited_msgs()

@@ -1,3 +1,5 @@
+#![feature(async_await)]
+
 mod actor;
 mod error;
 mod runtime;

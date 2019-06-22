@@ -22,6 +22,9 @@ type ControllerError<A> = <Controller<A> as RawController<A>>::Error;
 
 type Updated<A> = <<<A as Actor>::Context as Context<A>>::Updater as Updater<A>>::Updated;
 
+/// A wrapper around an actor's
+/// message, control and update
+/// channels.
 pub struct Spawned<A: Actor> {
     sender: Sender<A>,
     ctrler: Controller<A>,
@@ -29,6 +32,8 @@ pub struct Spawned<A: Actor> {
 }
 
 impl<A: Actor> Spawned<A> {
+    /// Creates a new `Spawned` struct from an actor's
+    /// context.
     pub fn new(ctx: &mut A::Context) -> Spawned<A> {
         Spawned {
             sender: ctx.sender().clone(),
@@ -40,6 +45,10 @@ impl<A: Actor> Spawned<A> {
         }
     }
 
+    /// Tries to send a message over the actor's
+    /// message channel, returning a future
+    /// resolving with the result returned by the
+    /// message handler.
     pub fn try_send_msg<M>(&mut self, msg: M) -> SenderRes<A::Output, SenderError<A>>
     where
         A: Handler<M>,
@@ -48,6 +57,10 @@ impl<A: Actor> Spawned<A> {
         self.sender.try_send(msg)
     }
 
+    /// Tries send an action over the actor's
+    /// control channel, returning a future resolving
+    /// with the result returned by the action
+    /// handler.
     pub fn try_send_action<D>(&mut self, action: D) -> ControllerRes<A::Output, ControllerError<A>>
     where
         A: ActionHandler<D>,
@@ -56,20 +69,28 @@ impl<A: Actor> Spawned<A> {
         self.ctrler.try_send(action)
     }
 
+    /// Returns a reference to the actor's message
+    /// channel sender.
     pub fn sender(&self) -> &Sender<A> {
         &self.sender
     }
 
+    /// Returns a reference to the actor's control
+    /// channel sender.
     pub fn controller(&self) -> &Controller<A> {
         &self.ctrler
     }
 
-    pub fn updated(&mut self) -> Option<Updated<A>> {
-        self.updted.take()
-    }
-
+    /// Tries to return a mutable reference to the
+    /// actor's update channel receiver.
     pub fn updated_ref(&mut self) -> Option<&mut Updated<A>> {
         self.updted.as_mut()
+    }
+
+    /// Tries to return the actor's update channel
+    /// receiver.
+    pub fn updated(&mut self) -> Option<Updated<A>> {
+        self.updted.take()
     }
 }
 

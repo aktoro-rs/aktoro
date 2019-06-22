@@ -11,5 +11,5 @@ jobs:
         displayName: 'Test'
       - bash: |
           rustup component add clippy
-          cargo clippy --all-target --all-features -- -D warnings
+          cargo clippy --all-targets --all-features -- -D warnings
         displayName: 'Clippy'

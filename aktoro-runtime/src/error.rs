@@ -10,18 +10,27 @@ pub struct Error {
 
 #[derive(Debug)]
 pub enum ErrorKind {
+    /// The actor has already been removed from
+    /// the runtime's actors list.
     AlreadyRemoved(u64),
+    /// Returns a `Box` contaning any error type
+    /// that implements the [`Error`] trait.
+    ///
+    /// [`Error`]: https://doc.rust-lang.org/std/error/trait.Error.html
     Std(Box<dyn StdError + Send>),
+    /// Multiple errors occured.
     Multiple(Vec<Error>),
 }
 
 impl Error {
+    /// Creates a new "already removed" error.
     pub(crate) fn already_removed(id: u64) -> Self {
         Error {
             kind: ErrorKind::AlreadyRemoved(id),
         }
     }
 
+    /// Creates a new boxed error.
     pub(crate) fn std<S>(err: S) -> Self
     where
         S: StdError + Send + 'static,
@@ -31,14 +40,20 @@ impl Error {
         }
     }
 
+    /// Creates a new "multiple errors" error.
     pub(crate) fn multiple(errors: Vec<Error>) -> Self {
         Error {
             kind: ErrorKind::Multiple(errors),
         }
     }
 
+    /// Add an error to the current error returning
+    /// a [`Error::Multiple`] error containing the
+    /// two errors.
+    ///
+    /// [`Error::Multiple`]: enum.ErrorKind.html#variant.Multiple
     pub(crate) fn add_err(self, err: Error) -> Error {
-        let mut error;
+        let error;
         match (self.kind, err.kind) {
             (ErrorKind::Multiple(mut errs), ErrorKind::Multiple(mut errs_)) => {
                 errs.append(&mut errs_);
@@ -62,6 +77,10 @@ impl Error {
         error
     }
 
+    /// If `res` if an `Err`, calls [`add_err`] with it,
+    /// or returns the current error otherwise.
+    ///
+    /// [`add_err`]: #method.add_err
     pub(crate) fn add_res<O>(self, res: Result<O, Error>) -> Error {
         match res {
             Ok(_) => self,
@@ -69,6 +88,9 @@ impl Error {
         }
     }
 
+    /// Whether the error occured because the actor
+    /// was already removed from the runtime's actors
+    /// list.
     pub fn is_already_removed(&self) -> bool {
         if let ErrorKind::AlreadyRemoved(_) = self.kind {
             true
@@ -77,6 +99,7 @@ impl Error {
         }
     }
 
+    /// Whether multiple errors occured.
     pub fn is_multiple(&self) -> bool {
         if let ErrorKind::Multiple(_) = self.kind {
             true
@@ -85,10 +108,13 @@ impl Error {
         }
     }
 
+    /// Returns a reference to the error's kind.
     pub fn kind(&self) -> &ErrorKind {
         &self.kind
     }
 
+    /// Returns the error's kind, consuming the
+    /// error.
     pub fn into_kind(self) -> ErrorKind {
         self.kind
     }

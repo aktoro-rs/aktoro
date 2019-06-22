@@ -7,6 +7,8 @@ pub(crate) enum Queue<T> {
 }
 
 impl<T> Queue<T> {
+    /// Pushes a message over the queue if
+    /// the inner buffer isn't full.
     pub(crate) fn push(&self, msg: T) -> Result<(), T> {
         match self {
             Queue::Bounded(queue) => queue.push(msg).map_err(|err| err.0),
@@ -17,6 +19,8 @@ impl<T> Queue<T> {
         }
     }
 
+    /// Pops a message from the queue if
+    /// one is available.
     pub(crate) fn pop(&self) -> Option<T> {
         match self {
             Queue::Bounded(queue) => {
@@ -36,6 +40,8 @@ impl<T> Queue<T> {
         }
     }
 
+    /// Whether the queue contains
+    /// messages to be poped.
     pub(crate) fn is_empty(&self) -> bool {
         match self {
             Queue::Bounded(queue) => queue.is_empty(),

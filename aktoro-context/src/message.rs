@@ -2,13 +2,15 @@ use aktoro_raw as raw;
 
 use crate::respond::Respond;
 
+/// A wrapper around a message that an actor should
+/// handle (this is used to allow generalization).
 pub(crate) struct Message<A, M>
 where
     A: raw::Handler<M>,
     M: Send + 'static,
 {
     msg: Option<M>,
-    resp: Respond<A::Output>,
+    resp: Option<Respond<A::Output>>,
 }
 
 impl<A, M> Message<A, M>
@@ -22,7 +24,7 @@ where
         (
             Message {
                 msg: Some(msg),
-                resp: resp.0,
+                resp: Some(resp.0),
             },
             resp.1,
         )
@@ -37,8 +39,10 @@ where
     type Actor = A;
 
     fn handle(&mut self, actor: &mut A, ctx: &mut A::Context) -> Result<(), A::Error> {
+        // If the message hasn't already been handled,
+        // we do so and return the result.
         if let Some(msg) = self.msg.take() {
-            self.resp.respond(actor.handle(msg, ctx)?);
+            self.resp.take().unwrap().respond(actor.handle(msg, ctx)?);
         }
 
         Ok(())
