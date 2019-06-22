@@ -2,6 +2,8 @@ use std::marker::PhantomData;
 
 use aktoro_raw as raw;
 
+/// A wrapper around an an event that an actor should
+/// handle (this is used to allow generalization).
 pub(crate) struct Event<A, E>
 where
     A: raw::EventHandler<E>,
@@ -32,6 +34,8 @@ where
     type Actor = A;
 
     fn handle(&mut self, actor: &mut A, ctx: &mut A::Context) -> Result<(), A::Error> {
+        // If the event hasn't already been handled, we
+        // do so.
         if let Some(event) = self.event.take() {
             actor.handle(event, ctx)?;
         }

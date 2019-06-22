@@ -17,14 +17,14 @@ use crossbeam_utils::atomic::AtomicCell;
 /// completion.
 pub struct Notify(Arc<Inner>);
 
-/// The inner channel of `Notify`.
+/// The inner "channel" of `Notify`.
 struct Inner {
     /// Whether the sender has already
     /// completed the action and notified
     /// the receiver.
     done: AtomicBool,
     /// A pointer to an optional waker
-    /// that will be waked after the
+    /// that will be notified when the
     /// action is completed.
     waker: AtomicCell<Option<Waker>>,
 }
@@ -41,22 +41,8 @@ impl Notify {
         (Notify(inner.clone()), Notify(inner))
     }
 
-    /// Whether the action has been completed
-    /// and the receiver notified.
-    pub fn is_done(&self) -> bool {
-        self.0.done.load(Ordering::SeqCst)
-    }
-
-    /// Register the receiver's `Waker` to
-    /// be waked up after the action's
-    /// completion.
-    pub(crate) fn register(&self, waker: Waker) {
-        self.0.waker.store(Some(waker));
-    }
-
-    /// Notifies the receiver that the action
-    /// has been completed, eventually
-    /// waking it up, and consuming the sender.
+    /// Stores the action as bein completed,
+    /// eventually waking up the receiver.
     pub fn done(self) {
         // We store the action as being completed.
         self.0.done.store(true, Ordering::SeqCst);
@@ -74,12 +60,12 @@ impl Future for Notify {
     fn poll(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<()> {
         // If the action has been completed, we
         // complete the future too.
-        if self.is_done() {
+        if self.0.done.load(Ordering::SeqCst) {
             Poll::Ready(())
         // Otherwise, we register the future's
         // waker.
         } else {
-            self.register(ctx.waker().clone());
+            self.0.waker.store(Some(ctx.waker().clone()));
             Poll::Pending
         }
     }

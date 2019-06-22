@@ -7,11 +7,24 @@ use aktoro_channel::error::TrySendError;
 use aktoro_raw as raw;
 use futures_core::Stream;
 
+/// An actor's update channel sender, used by
+/// [`Context`].
+///
+/// [`Context`]: struct.Context.html
 pub struct Updater<A: raw::Actor>(channel::Sender<A::Status>);
 
+/// An actor's update channel receiver, used
+/// by [`Context`].
+///
+/// [`Context`]: struct.Context.html
 pub struct Updated<A: raw::Actor>(channel::Receiver<A::Status>);
 
+/// Creates a new control channel for the
+/// specified actor type, returning a sender
+/// and receiver connected to it.
 pub(crate) fn new<A: raw::Actor>() -> (Updater<A>, Updated<A>) {
+    // TODO: maybe allow the channel's configuration
+    // to be specified.
     let (sender, recver) = channel::Builder::new()
         .unbounded()
         .unlimited_msgs()

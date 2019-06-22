@@ -2,13 +2,15 @@ use aktoro_raw as raw;
 
 use crate::respond::Respond;
 
+/// A wrapper around an action that an actor should
+/// handle (this is used to allow generalization).
 pub(crate) struct Action<A, D>
 where
     A: raw::ActionHandler<D>,
     D: Send + 'static,
 {
     action: Option<D>,
-    resp: Respond<A::Output>,
+    resp: Option<Respond<A::Output>>,
 }
 
 impl<A, D> Action<A, D>
@@ -22,7 +24,7 @@ where
         (
             Action {
                 action: Some(action),
-                resp: resp.0,
+                resp: Some(resp.0),
             },
             resp.1,
         )
@@ -37,8 +39,13 @@ where
     type Actor = A;
 
     fn handle(&mut self, actor: &mut A, ctx: &mut A::Context) -> Result<(), A::Error> {
+        // If the action hasn't already been handled,
+        // we do so and return the result.
         if let Some(action) = self.action.take() {
-            self.resp.respond(actor.handle(action, ctx)?);
+            self.resp
+                .take()
+                .unwrap()
+                .respond(actor.handle(action, ctx)?);
         }
 
         Ok(())

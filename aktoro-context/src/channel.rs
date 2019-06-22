@@ -10,11 +10,24 @@ use futures_util::FutureExt;
 
 use crate::message::Message;
 
+/// An actor's message channel sender, used by
+/// [`Context`].
+///
+/// [`Context`]: struct.Context.html
 pub struct Sender<A: raw::Actor>(channel::Sender<Box<dyn raw::Message<Actor = A>>>);
 
+/// An actor's message channel receiver, used
+/// by [`Context`].
+///
+/// [`Context`]: struct.Context.html
 pub struct Receiver<A: raw::Actor>(channel::Receiver<Box<dyn raw::Message<Actor = A>>>);
 
+/// Creates a new message channel for the
+/// specified actor type, returning a sender
+/// and receiver connected to it.
 pub(crate) fn new<A: raw::Actor>() -> (Sender<A>, Receiver<A>) {
+    // TODO: maybe allow the channel's configuration
+    // to be specified.
     let (sender, recver) = channel::Builder::new()
         .unbounded()
         .unlimited_msgs()

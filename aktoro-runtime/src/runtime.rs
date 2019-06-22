@@ -18,9 +18,9 @@ use crate::actor::KilledRecver;
 use crate::actor::KilledSender;
 use crate::error::Error;
 
-/// An actor runtime using the [`runtime`]
+/// An actor runtime using the [`runtime`] crate.
 ///
-/// [`runtime`]: https://docs.rs/crates/runtime
+/// [`runtime`]: https://docs.rs/runtime
 pub struct Runtime {
     /// A map matching an actor's ID with
     /// a sender for its kill channel.
