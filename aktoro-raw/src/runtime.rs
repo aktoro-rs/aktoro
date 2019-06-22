@@ -32,7 +32,7 @@ pub trait Runtime {
     fn spawn<A: Actor>(&mut self, actor: A) -> Option<Spawned<A>>;
 
     /// Asks to all the actors managed by the
-    /// runtime, to stop, returning a future
+    /// runtime to stop, returning a future
     /// resolving after all of them have been
     /// stopped.
     fn stop(self) -> Self::Stop;
