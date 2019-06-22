@@ -15,6 +15,8 @@ use futures_core::Stream;
 
 use crate::error::Error;
 
+/// A wrapper around an actor and its
+/// context.
 pub(crate) struct Actor<A: raw::Actor> {
     id: u64,
     act: A,
