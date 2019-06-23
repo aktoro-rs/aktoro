@@ -18,6 +18,9 @@ use crate::actor::KillSender as Kill;
 use crate::actor::KilledRecver;
 use crate::actor::KilledSender;
 use crate::error::Error;
+use crate::tcp::TcpClient;
+use crate::tcp::TcpServer;
+use crate::udp::UdpSocket;
 
 /// An actor runtime using the [`runtime`] crate.
 ///
@@ -62,6 +65,11 @@ impl Runtime {
 }
 
 impl raw::Runtime for Runtime {
+    type TcpClient = TcpClient;
+    type TcpServer = TcpServer;
+
+    type UdpSocket = UdpSocket;
+
     type Stop = Stop;
     type Wait = Wait;
 

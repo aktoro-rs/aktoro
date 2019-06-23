@@ -24,6 +24,11 @@ pub mod prelude {
     pub use aktoro_raw::Updated as RawUpdated;
     pub use aktoro_raw::Updater as RawUpdater;
 
+    pub use aktoro_raw::TcpClient as RawTcpClient;
+    pub use aktoro_raw::TcpServer as RawTcpServer;
+    pub use aktoro_raw::TcpStream as RawTcpStream;
+    pub use aktoro_raw::UdpSocket as RawUdpSocket;
+
     #[cfg(feature = "context")]
     pub use crate::context::*;
 
