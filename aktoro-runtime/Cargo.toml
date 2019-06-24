@@ -1,7 +1,7 @@
 [package]
 name        = "aktoro-runtime"
 description = "aktoro's runtime default implementation"
-version     = "0.1.0-alpha.2"
+version     = "0.1.0-alpha.3"
 license     = "MIT"
 authors     = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
 edition     = "2018"
@@ -19,7 +19,7 @@ version = "0.1.0-alpha.7"
 
 [dependencies.aktoro-raw]
 path    = "../aktoro-raw"
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.3"
 
 [dependencies.runtime]
 version          = "0.3.0-alpha.5"

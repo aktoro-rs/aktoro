@@ -1,7 +1,7 @@
 [package]
 name        = "aktoro-raw"
 description = "aktoro's raw API"
-version     = "0.1.0-alpha.2"
+version     = "0.1.0-alpha.3"
 license     = "MIT"
 authors     = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
 edition     = "2018"
