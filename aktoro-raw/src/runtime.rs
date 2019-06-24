@@ -3,8 +3,31 @@ use std::future::Future;
 
 use crate::actor::Actor;
 use crate::spawned::Spawned;
+use crate::tcp::TcpClient;
+use crate::tcp::TcpServer;
+use crate::udp::UdpSocket;
 
 pub trait Runtime {
+    /// The type of the TCP socket client
+    /// that actors can use to be compatible
+    /// with the runtime (this might not be
+    /// necessary depending on the runtime
+    /// implementation).
+    type TcpClient: TcpClient;
+
+    /// The type of the TCP socket server
+    /// that actors can use to be compatible
+    /// with the runtime (this might not be
+    /// necessary depending on the runtime
+    /// implementation).
+    type TcpServer: TcpServer;
+
+    /// The type of UDP socket that actors
+    /// can use to be compatible with the
+    /// runtime (this might not be necessary
+    /// depending on the runtime implementation).
+    type UdpSocket: UdpSocket;
+
     /// The future returned after calling the
     /// [`stop`] method. It will resolve after
     /// all the actors have been stopped.
