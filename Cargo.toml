@@ -34,5 +34,5 @@ members = [
 	"aktoro-context",
 	"aktoro-runtime",
 
-#	"examples/hello_world", # See: https://github.com/rust-lang/rust/pull/61872
+	"examples/hello_world",
 ]

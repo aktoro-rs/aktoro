@@ -33,9 +33,7 @@ pub trait TcpServer: Sized {
     fn local_addr(&self) -> Result<SocketAddr, Self::Error>;
 
     /// Returns a stream of incoming connections.
-    fn incoming(
-        &mut self,
-    ) -> Result<TcpServerIncoming<Self::Stream, Self::Error>, Self::Error>;
+    fn incoming(&mut self) -> Result<TcpServerIncoming<Self::Stream, Self::Error>, Self::Error>;
 }
 
 pub trait TcpStream: AsyncRead + AsyncWrite {

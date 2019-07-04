@@ -70,10 +70,7 @@ impl raw::UdpSocket for UdpSocket {
         }))
     }
 
-    fn recv<'s>(
-        &'s mut self,
-        buf: &'s mut [u8],
-    ) -> Result<raw::UdpSocketRecv<'s, Error>, Error> {
+    fn recv<'s>(&'s mut self, buf: &'s mut [u8]) -> Result<raw::UdpSocketRecv<'s, Error>, Error> {
         Ok(Box::new(Recv {
             recv_from: self.socket.recv_from(buf),
         }))
