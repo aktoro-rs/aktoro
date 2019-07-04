@@ -1,6 +1,9 @@
 #![feature(async_await)]
 
+use std::task::Poll;
+
 use aktoro::prelude::*;
+use futures_util::poll;
 
 struct HelloActor;
 
@@ -48,9 +51,19 @@ async fn main() {
 
     let spawned = rt.spawn(HelloActor).unwrap();
 
-    runtime::spawn(run("World", spawned));
+    let mut run = runtime::spawn(run("World", spawned));
+    let mut wait = rt.wait();
 
-    rt.wait().await.unwrap();
+    loop {
+        if let Poll::Ready(_) = poll!(&mut run) {
+            break;
+        }
+
+        if let Poll::Ready(res) = poll!(&mut wait) {
+            res.expect("an error occured while waiting for the runtime to stop");
+            break;
+        }
+    }
 }
 
 async fn run(name: &'static str, mut spawned: Spawned<HelloActor>) {
