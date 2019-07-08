@@ -50,6 +50,12 @@ pub struct TcpIncoming<'i> {
     incoming: net::tcp::IncomingStream<'i>,
 }
 
+// TODO
+pub struct OwnedTcpIcoming {
+    // TODO
+    server: TcpServer,
+}
+
 /// A TCP stream, owned by a server,
 /// and allowing it to communicate with
 /// a client.
@@ -89,11 +95,17 @@ impl raw::TcpServer for TcpServer {
         }
     }
 
-    fn incoming<'s>(
-        &'s mut self,
-    ) -> Result<Box<dyn Stream<Item = Result<TcpStream, Error>> + 's>, Error> {
+    fn incoming<'i>(
+        &'i mut self,
+    ) -> Result<Box<dyn Stream<Item = Result<TcpStream, Error>> + Unpin + Send + 'i>, Error> {
         Ok(Box::new(TcpIncoming {
             incoming: self.listener.incoming(),
+        }))
+    }
+
+    fn into_incoming(self) -> Result<Box<dyn Stream<Item = Result<TcpStream, Error>> + Unpin + Send>, Error> {
+        Ok(Box::new(OwnedTcpIcoming {
+            server: self,
         }))
     }
 }
@@ -159,6 +171,20 @@ impl<'i> Stream for TcpIncoming<'i> {
             Poll::Pending => Poll::Pending,
         }
     }
+}
+
+impl Stream for OwnedTcpIcoming {
+    type Item = Result<TcpStream, Error>;
+
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<Self::Item>> {
+        match Pin::new(&mut self.get_mut().server.listener.accept()).poll(ctx) {
+            Poll::Ready(Ok((stream, _))) => {
+                Poll::Ready(Some(Ok(TcpStream { stream })))
+            }
+            Poll::Ready(Err(err)) => Poll::Ready(Some(Err(Box::new(err).into()))),
+            Poll::Pending => Poll::Pending,
+        }
+   }
 }
 
 impl AsyncRead for TcpClient {

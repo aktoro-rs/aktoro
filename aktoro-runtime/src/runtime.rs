@@ -18,9 +18,7 @@ use crate::actor::KillSender as Kill;
 use crate::actor::KilledRecver;
 use crate::actor::KilledSender;
 use crate::error::Error;
-use crate::tcp::TcpClient;
-use crate::tcp::TcpServer;
-use crate::udp::UdpSocket;
+use crate::net::NetworkManager;
 
 /// An actor runtime using the [`runtime`] crate.
 ///
@@ -65,10 +63,7 @@ impl Runtime {
 }
 
 impl raw::Runtime for Runtime {
-    type TcpClient = TcpClient;
-    type TcpServer = TcpServer;
-
-    type UdpSocket = UdpSocket;
+    type NetworkManager = NetworkManager;
 
     type Stop = Stop;
     type Wait = Wait;
@@ -101,6 +96,10 @@ impl raw::Runtime for Runtime {
         self.actors.insert(id, (sender, handle));
 
         Some(spawned)
+    }
+
+    fn net(&mut self) -> NetworkManager {
+        NetworkManager
     }
 
     /// Asks to all the actors managed by the

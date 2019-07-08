@@ -10,7 +10,7 @@ pub trait Action: Send {
     ) -> Result<(), <Self::Actor as Actor>::Error>;
 }
 
-pub trait ActionHandler<A: Send + 'static>: Actor {
+pub trait ActionHandler<A: Send>: Actor {
     type Output: Send;
 
     /// Handles the action, returning a result

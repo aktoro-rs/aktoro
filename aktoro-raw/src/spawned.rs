@@ -52,7 +52,7 @@ impl<A: Actor> Spawned<A> {
     pub fn try_send_msg<M>(&mut self, msg: M) -> SenderRes<A::Output, SenderError<A>>
     where
         A: Handler<M>,
-        M: Send,
+        M: Send + 'static,
     {
         self.sender.try_send(msg)
     }

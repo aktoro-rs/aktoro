@@ -26,7 +26,7 @@ pub trait Sender<A: Actor>: Clone {
     fn try_send<M>(&mut self, msg: M) -> SenderRes<A::Output, Self::Error>
     where
         A: Handler<M>,
-        M: Send;
+        M: Send + 'static;
 }
 
 pub trait Receiver<A: Actor>: Stream<Item = Box<dyn Message<Actor = A>>> {}

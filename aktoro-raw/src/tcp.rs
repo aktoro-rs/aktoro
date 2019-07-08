@@ -7,22 +7,23 @@ use futures_core::Stream;
 use futures_io::AsyncRead;
 use futures_io::AsyncWrite;
 
-pub type TcpServerIncoming<'s, S, E> = Box<dyn Stream<Item = Result<S, E>> + 's>;
+pub type TcpServerIncoming<'s, S, E> = Box<dyn Stream<Item = Result<S, E>> + Unpin + Send + 's>;
+pub type OwnedTcpServerIncoming<S, E> = Box<dyn Stream<Item = Result<S, E>> + Unpin + Send>;
 
-pub trait TcpClient: TcpStream + Sized {
+pub trait TcpClient: TcpStream + Unpin + Send + Sized {
     type Connect: Future<Output = Result<Self, <Self as TcpClient>::Error>>;
 
-    type Error: StdError;
+    type Error: StdError + Send;
 
     /// Tries to connect to a TCP server at the
     /// given address.
     fn connect<A: ToSocketAddrs>(addr: A) -> Result<Self::Connect, <Self as TcpClient>::Error>;
 }
 
-pub trait TcpServer: Sized {
+pub trait TcpServer: Unpin + Send + Sized {
     type Stream: TcpStream;
 
-    type Error: StdError;
+    type Error: StdError + Send;
 
     /// Tries to create a new TCP server that
     /// will be bound to the given address.
@@ -34,10 +35,13 @@ pub trait TcpServer: Sized {
 
     /// Returns a stream of incoming connections.
     fn incoming(&mut self) -> Result<TcpServerIncoming<Self::Stream, Self::Error>, Self::Error>;
+
+    // TODO
+    fn into_incoming(self) -> Result<OwnedTcpServerIncoming<Self::Stream, Self::Error>, Self::Error>;
 }
 
-pub trait TcpStream: AsyncRead + AsyncWrite {
-    type Error: StdError;
+pub trait TcpStream: AsyncRead + AsyncWrite + Unpin + Send {
+    type Error: StdError + Send;
 
     /// Returns the address that the server
     /// is bound to.

@@ -24,6 +24,7 @@ pub mod prelude {
     pub use aktoro_raw::Updated as RawUpdated;
     pub use aktoro_raw::Updater as RawUpdater;
 
+    pub use aktoro_raw::NetworkManager as RawNetworkManager;
     pub use aktoro_raw::TcpClient as RawTcpClient;
     pub use aktoro_raw::TcpServer as RawTcpServer;
     pub use aktoro_raw::TcpStream as RawTcpStream;

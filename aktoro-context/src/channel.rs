@@ -49,7 +49,7 @@ where
     fn try_send<M>(&mut self, msg: M) -> raw::SenderRes<A::Output, Self::Error>
     where
         A: raw::Handler<M>,
-        M: Send,
+        M: Send + 'static,
     {
         let (msg, recv) = Message::new(msg);
 

@@ -10,7 +10,7 @@ pub trait Event: Send {
     ) -> Result<(), <Self::Actor as Actor>::Error>;
 }
 
-pub trait EventHandler<E: Send + 'static>: Actor {
+pub trait EventHandler<E: Send>: Actor {
     /// Handles the event.
     fn handle(&mut self, event: E, ctx: &mut Self::Context) -> Result<(), Self::Error>;
 }

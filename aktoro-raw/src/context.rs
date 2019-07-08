@@ -1,4 +1,7 @@
+use std::future::Future;
+
 use futures_core::Stream;
+use futures_io::AsyncRead;
 
 use crate::action::Action;
 use crate::actor::Actor;
@@ -6,6 +9,7 @@ use crate::channel::Sender;
 use crate::control::Controller;
 use crate::event::Event;
 use crate::event::EventHandler;
+use crate::message::Handler;
 use crate::message::Message;
 use crate::update::Updater;
 
@@ -61,6 +65,27 @@ pub trait Context<A: Actor>: Unpin + Send + 'static + Stream<Item = Work<A>> {
     /// Gets a mutable reference to the actors's
     /// update channel receiver.
     fn updater(&mut self) -> &mut Self::Updater;
+
+    fn wait<F, M, O, T>(&mut self, fut: F, map: M)
+    where
+        F: Future<Output = O> + Unpin + Send + 'static,
+        M: Fn(O) -> T + Send + 'static,
+        A: Handler<T, Output = ()>,
+        T: Send + 'static;
+
+    fn subscribe<S, M, I, T>(&mut self, stream: S, map: M)
+    where
+        S: Stream<Item = I> + Unpin + Send + 'static,
+        M: Fn(I) -> T + Send + 'static,
+        A: Handler<T, Output = ()>,
+        T: Send + 'static;
+
+    fn read<R, M, T>(&mut self, read: R, map: M)
+    where
+        R: AsyncRead + Unpin + Send + 'static,
+        M: Fn(&mut [u8], usize) -> T + Unpin + Send + Sync + 'static,
+        A: Handler<T, Output = ()>,
+        T: Send + 'static;
 }
 
 pub enum Work<A: Actor> {
