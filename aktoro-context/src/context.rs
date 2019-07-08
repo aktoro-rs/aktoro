@@ -147,9 +147,7 @@ where
         A: raw::Handler<T, Output = ()>,
         T: Send + 'static,
     {
-        self.futs.push(Box::pin(
-            AsyncMessageFut::new(fut.map(map)),
-        ));
+        self.futs.push(Box::pin(AsyncMessageFut::new(fut.map(map))));
     }
 
     fn subscribe<S, M, I, T>(&mut self, stream: S, map: M)
@@ -159,9 +157,8 @@ where
         A: raw::Handler<T, Output = ()>,
         T: Send + 'static,
     {
-        self.streams.push(Box::pin(
-            AsyncMessageStream::new(stream.map(map)),
-        ));
+        self.streams
+            .push(Box::pin(AsyncMessageStream::new(stream.map(map))));
     }
 
     fn read<R, M, T>(&mut self, read: R, map: M)
@@ -171,9 +168,7 @@ where
         A: raw::Handler<T, Output = ()>,
         T: Send + 'static,
     {
-        self.reads.push(Box::pin(
-            AsyncReadStream::new(read, map),
-        ));
+        self.reads.push(Box::pin(AsyncReadStream::new(read, map)));
     }
 }
 
@@ -228,7 +223,7 @@ where
                 Poll::Ready(msg) => {
                     context.futs.remove(i);
 
-                    return Poll::Ready(Some(raw::Work::Message(msg)))
+                    return Poll::Ready(Some(raw::Work::Message(msg)));
                 }
                 Poll::Pending => (),
             }

@@ -35,4 +35,5 @@ members = [
 	"aktoro-runtime",
 
 	"examples/hello_world",
+	"examples/net",
 ]

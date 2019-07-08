@@ -14,9 +14,7 @@ struct Kill;
 
 impl Actor for HelloActor {
     type Context = Context<Self>;
-
     type Status = Status;
-
     type Error = Error;
 }
 

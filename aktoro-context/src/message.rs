@@ -184,10 +184,7 @@ where
 {
     type Actor = A;
 
-    fn poll(
-        self: Pin<&mut Self>,
-        ctx: &mut FutContext,
-    ) -> Poll<Box<dyn raw::Message<Actor = A>>> {
+    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Box<dyn raw::Message<Actor = A>>> {
         match Pin::new(&mut self.get_mut().fut).poll(ctx) {
             Poll::Ready(msg) => Poll::Ready(Box::new(AsyncMessage::new(msg))),
             Poll::Pending => Poll::Pending,
@@ -208,9 +205,7 @@ where
         ctx: &mut FutContext,
     ) -> Poll<Option<Box<dyn raw::Message<Actor = A>>>> {
         match Pin::new(&mut self.get_mut().stream).poll_next(ctx) {
-            Poll::Ready(Some(msg)) => Poll::Ready(Some(
-                Box::new(AsyncMessage::new(msg))
-            )),
+            Poll::Ready(Some(msg)) => Poll::Ready(Some(Box::new(AsyncMessage::new(msg)))),
             Poll::Ready(None) => Poll::Ready(None),
             Poll::Pending => Poll::Pending,
         }
@@ -236,9 +231,7 @@ where
             Poll::Ready(Ok(read)) => {
                 let msg = (stream.map)(&mut stream.buf, read);
 
-                Poll::Ready(Ok(
-                    Box::new(AsyncMessage::new(msg))
-                ))
+                Poll::Ready(Ok(Box::new(AsyncMessage::new(msg))))
             }
             Poll::Ready(Err(err)) => Poll::Ready(Err(err)),
             Poll::Pending => Poll::Pending,

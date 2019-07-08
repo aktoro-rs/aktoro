@@ -103,10 +103,10 @@ impl raw::TcpServer for TcpServer {
         }))
     }
 
-    fn into_incoming(self) -> Result<Box<dyn Stream<Item = Result<TcpStream, Error>> + Unpin + Send>, Error> {
-        Ok(Box::new(OwnedTcpIcoming {
-            server: self,
-        }))
+    fn into_incoming(
+        self,
+    ) -> Result<Box<dyn Stream<Item = Result<TcpStream, Error>> + Unpin + Send>, Error> {
+        Ok(Box::new(OwnedTcpIcoming { server: self }))
     }
 }
 
@@ -178,13 +178,11 @@ impl Stream for OwnedTcpIcoming {
 
     fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<Self::Item>> {
         match Pin::new(&mut self.get_mut().server.listener.accept()).poll(ctx) {
-            Poll::Ready(Ok((stream, _))) => {
-                Poll::Ready(Some(Ok(TcpStream { stream })))
-            }
+            Poll::Ready(Ok((stream, _))) => Poll::Ready(Some(Ok(TcpStream { stream }))),
             Poll::Ready(Err(err)) => Poll::Ready(Some(Err(Box::new(err).into()))),
             Poll::Pending => Poll::Pending,
         }
-   }
+    }
 }
 
 impl AsyncRead for TcpClient {

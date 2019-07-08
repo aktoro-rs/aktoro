@@ -37,7 +37,9 @@ pub trait TcpServer: Unpin + Send + Sized {
     fn incoming(&mut self) -> Result<TcpServerIncoming<Self::Stream, Self::Error>, Self::Error>;
 
     // TODO
-    fn into_incoming(self) -> Result<OwnedTcpServerIncoming<Self::Stream, Self::Error>, Self::Error>;
+    fn into_incoming(
+        self,
+    ) -> Result<OwnedTcpServerIncoming<Self::Stream, Self::Error>, Self::Error>;
 }
 
 pub trait TcpStream: AsyncRead + AsyncWrite + Unpin + Send {
