@@ -187,7 +187,7 @@ impl Future for Wait {
             // were removed in case other
             // actors stopped in the mean
             // time.
-            if remove.len() > 0 {
+            if !remove.is_empty() {
                 continue;
             }
 

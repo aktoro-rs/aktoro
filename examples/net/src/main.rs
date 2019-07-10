@@ -83,7 +83,7 @@ where
         println!("new connection from {}", conn.peer_addr().unwrap());
 
         let (read, _) = conn.split();
-        ctx.read(read, 64, |data| Received(data), |_| ());
+        ctx.read(read, 64, Received, |_| ());
 
         Ok(())
     }

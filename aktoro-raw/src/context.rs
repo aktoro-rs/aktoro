@@ -82,13 +82,8 @@ pub trait Context<A: Actor>: Unpin + Send + 'static + Stream<Item = Work<A>> {
         A: Handler<T, Output = ()>,
         T: Send + 'static;
 
-    fn read<R, M, N, T, E>(
-        &mut self,
-        read: R,
-        cap: usize,
-        map: M,
-        map_err: N,
-    ) where
+    fn read<R, M, N, T, E>(&mut self, read: R, cap: usize, map: M, map_err: N)
+    where
         R: AsyncRead + Unpin + Send + 'static,
         M: Fn(Vec<u8>) -> T + Unpin + Send + Sync + 'static,
         N: Fn(io::Error) -> E + Unpin + Send + Sync + 'static,
@@ -96,15 +91,10 @@ pub trait Context<A: Actor>: Unpin + Send + 'static + Stream<Item = Work<A>> {
         T: Send + 'static,
         E: Send + 'static;
 
-    fn write<W, M, N, T, E>(
-        &mut self,
-        write: W,
-        data: Vec<u8>,
-        map: M,
-        map_err: N,
-    ) where
+    fn write<W, M, N, T, E>(&mut self, write: W, data: Vec<u8>, map: M, map_err: N)
+    where
         W: AsyncWrite + Unpin + Send + 'static,
-        M: Fn((Vec<u8>, usize), W)  -> T + Unpin + Send + Sync + 'static,
+        M: Fn((Vec<u8>, usize), W) -> T + Unpin + Send + Sync + 'static,
         N: Fn(io::Error) -> E + Unpin + Send + Sync + 'static,
         A: Handler<T, Output = ()> + Handler<E, Output = ()>,
         T: Send + 'static,

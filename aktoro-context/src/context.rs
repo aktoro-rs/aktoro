@@ -164,13 +164,8 @@ where
             .push(Box::pin(AsyncMessageStream::new(stream.map(map))));
     }
 
-    fn read<R, M, N, T, E>(
-        &mut self,
-        read: R,
-        cap: usize,
-        map: M,
-        map_err: N,
-    ) where
+    fn read<R, M, N, T, E>(&mut self, read: R, cap: usize, map: M, map_err: N)
+    where
         R: AsyncRead + Unpin + Send + 'static,
         M: Fn(Vec<u8>) -> T + Unpin + Send + Sync + 'static,
         N: Fn(io::Error) -> E + Unpin + Send + Sync + 'static,
@@ -178,24 +173,21 @@ where
         T: Send + 'static,
         E: Send + 'static,
     {
-        self.reads.push(Box::pin(AsyncReadStream::new(read, cap, map, map_err)));
+        self.reads
+            .push(Box::pin(AsyncReadStream::new(read, cap, map, map_err)));
     }
 
-    fn write<W, M, N, T, E>(
-        &mut self,
-        write: W,
-        data: Vec<u8>,
-        map: M,
-        map_err: N,
-    ) where
+    fn write<W, M, N, T, E>(&mut self, write: W, data: Vec<u8>, map: M, map_err: N)
+    where
         W: AsyncWrite + Unpin + Send + 'static,
-        M: Fn((Vec<u8>, usize), W)  -> T + Unpin + Send + Sync + 'static,
+        M: Fn((Vec<u8>, usize), W) -> T + Unpin + Send + Sync + 'static,
         N: Fn(io::Error) -> E + Unpin + Send + Sync + 'static,
         A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()>,
         T: Send + 'static,
         E: Send + 'static,
     {
-        self.futs.push(Box::pin(AsyncWriteFut::new(write, data, map, map_err)));
+        self.futs
+            .push(Box::pin(AsyncWriteFut::new(write, data, map, map_err)));
     }
 }
 

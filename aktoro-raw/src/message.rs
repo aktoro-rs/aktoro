@@ -21,19 +21,14 @@ pub trait Message: Send {
 pub trait AsyncMessageFut: Send {
     type Actor: Actor;
 
-    fn poll(
-        self: Pin<&mut Self>,
-        ctx: &mut FutContext,
-    ) -> Poll<AsyncMessageOutput<Self::Actor>>;
+    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<AsyncMessageOutput<Self::Actor>>;
 }
 
 pub trait AsyncMessageStream: Send {
     type Actor: Actor;
 
-    fn poll_next(
-        self: Pin<&mut Self>,
-        ctx: &mut FutContext,
-    ) -> Poll<AsyncMessageItem<Self::Actor>>;
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext)
+        -> Poll<AsyncMessageItem<Self::Actor>>;
 }
 
 pub trait AsyncReadStream: Send {

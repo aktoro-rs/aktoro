@@ -154,12 +154,9 @@ where
     E: Send,
 {
     pub(crate) fn new(read: R, cap: usize, map: M, map_err: N) -> Self {
-        let mut buf = Vec::with_capacity(cap);
-        buf.resize(cap, 0);
-
         AsyncReadStream {
             cap,
-            buf,
+            buf: vec![0; cap],
             read,
             map,
             map_err,
@@ -172,7 +169,7 @@ impl<A, W, M, N, T, E> AsyncWriteFut<A, W, M, N, T, E>
 where
     A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()>,
     W: AsyncWrite + Unpin + Send,
-    M: Fn((Vec<u8>, usize), W)  -> T + Unpin + Send + Sync,
+    M: Fn((Vec<u8>, usize), W) -> T + Unpin + Send + Sync,
     N: Fn(io::Error) -> E + Unpin + Send + Sync,
     T: Send,
     E: Send,
@@ -232,7 +229,10 @@ where
 {
     type Actor = A;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<raw::AsyncMessageOutput<Self::Actor>> {
+    fn poll(
+        self: Pin<&mut Self>,
+        ctx: &mut FutContext,
+    ) -> Poll<raw::AsyncMessageOutput<Self::Actor>> {
         match Pin::new(&mut self.get_mut().fut).poll(ctx) {
             Poll::Ready(msg) => Poll::Ready(Box::new(AsyncMessage::new(msg))),
             Poll::Pending => Poll::Pending,
@@ -313,14 +313,10 @@ where
     ) -> Poll<raw::AsyncMessageOutput<Self::Actor>> {
         let fut = self.get_mut();
 
-        match Pin::new(&mut fut.write.as_mut().unwrap())
-            .poll_write(ctx, fut.data.as_ref().unwrap())
+        match Pin::new(&mut fut.write.as_mut().unwrap()).poll_write(ctx, fut.data.as_ref().unwrap())
         {
             Poll::Ready(Ok(wrote)) => {
-                let msg = (fut.map)(
-                    (fut.data.take().unwrap(), wrote),
-                    fut.write.take().unwrap(),
-                );
+                let msg = (fut.map)((fut.data.take().unwrap(), wrote), fut.write.take().unwrap());
 
                 Poll::Ready(Box::new(AsyncMessage::new(msg)))
             }
