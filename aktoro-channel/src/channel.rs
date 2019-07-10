@@ -1,8 +1,10 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use std::task::Waker;
 
 use crossbeam_queue::SegQueue;
+use crossbeam_utils::atomic::AtomicCell;
 
 use crate::counters::Counters;
 use crate::error::*;
@@ -16,7 +18,7 @@ pub(crate) struct Channel<T> {
     pub(crate) queue: Queue<Message<T>>,
     pub(crate) closed: AtomicBool,
     pub(crate) counters: Counters,
-    pub(crate) wakers: SegQueue<Waker>,
+    pub(crate) wakers: SegQueue<Arc<AtomicCell<Option<Waker>>>>,
 }
 
 impl<T> Channel<T> {
@@ -74,7 +76,7 @@ impl<T> Channel<T> {
     /// Registers a new waker to be
     /// notified when a new message is
     /// available.
-    pub(crate) fn register(&self, waker: Waker) {
+    pub(crate) fn register(&self, waker: Arc<AtomicCell<Option<Waker>>>) {
         self.wakers.push(waker);
     }
 
@@ -82,7 +84,13 @@ impl<T> Channel<T> {
     /// available.
     fn notify(&self) {
         if let Ok(waker) = self.wakers.pop() {
-            waker.wake();
+            if let Some(waker_) = waker.swap(None) {
+                waker_.wake();
+
+                self.wakers.push(waker);
+            } else {
+                self.notify();
+            }
         }
     }
 
