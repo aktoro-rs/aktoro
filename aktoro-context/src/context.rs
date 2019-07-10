@@ -8,7 +8,9 @@ use aktoro_channel::error::TrySendError;
 use aktoro_raw as raw;
 use aktoro_raw::Updater as RawUpdater;
 use futures_core::Stream;
+use futures_io as io;
 use futures_io::AsyncRead;
+use futures_io::AsyncWrite;
 use futures_util::FutureExt;
 use futures_util::StreamExt;
 
@@ -22,6 +24,7 @@ use crate::event::Event;
 use crate::message::AsyncMessageFut;
 use crate::message::AsyncMessageStream;
 use crate::message::AsyncReadStream;
+use crate::message::AsyncWriteFut;
 use crate::update;
 use crate::update::Updated;
 use crate::update::Updater;
@@ -161,14 +164,38 @@ where
             .push(Box::pin(AsyncMessageStream::new(stream.map(map))));
     }
 
-    fn read<R, M, T>(&mut self, read: R, map: M)
-    where
+    fn read<R, M, N, T, E>(
+        &mut self,
+        read: R,
+        cap: usize,
+        map: M,
+        map_err: N,
+    ) where
         R: AsyncRead + Unpin + Send + 'static,
-        M: Fn(&mut [u8], usize) -> T + Unpin + Send + Sync + 'static,
-        A: raw::Handler<T, Output = ()>,
+        M: Fn(Vec<u8>) -> T + Unpin + Send + Sync + 'static,
+        N: Fn(io::Error) -> E + Unpin + Send + Sync + 'static,
+        A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()>,
         T: Send + 'static,
+        E: Send + 'static,
     {
-        self.reads.push(Box::pin(AsyncReadStream::new(read, map)));
+        self.reads.push(Box::pin(AsyncReadStream::new(read, cap, map, map_err)));
+    }
+
+    fn write<W, M, N, T, E>(
+        &mut self,
+        write: W,
+        data: Vec<u8>,
+        map: M,
+        map_err: N,
+    ) where
+        W: AsyncWrite + Unpin + Send + 'static,
+        M: Fn((Vec<u8>, usize), W)  -> T + Unpin + Send + Sync + 'static,
+        N: Fn(io::Error) -> E + Unpin + Send + Sync + 'static,
+        A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()>,
+        T: Send + 'static,
+        E: Send + 'static,
+    {
+        self.futs.push(Box::pin(AsyncWriteFut::new(write, data, map, map_err)));
     }
 }
 
@@ -246,19 +273,10 @@ where
         }
 
         // TODO
-        let mut to_remove = vec![];
-        for (i, read) in context.reads.iter_mut().enumerate() {
-            match read.as_mut().poll_read(ctx) {
-                Poll::Ready(Ok(msg)) => {
-                    return Poll::Ready(Some(raw::Work::Message(msg)));
-                }
-                Poll::Ready(Err(_)) => to_remove.push(i), // FIXME: handle error
-                Poll::Pending => (),
+        for read in context.reads.iter_mut() {
+            if let Poll::Ready(msg) = read.as_mut().poll_read(ctx) {
+                return Poll::Ready(Some(raw::Work::Message(msg)));
             }
-        }
-
-        for to_remove in to_remove {
-            context.reads.remove(to_remove);
         }
 
         Poll::Pending

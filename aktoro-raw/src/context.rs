@@ -1,7 +1,9 @@
 use std::future::Future;
 
 use futures_core::Stream;
+use futures_io as io;
 use futures_io::AsyncRead;
+use futures_io::AsyncWrite;
 
 use crate::action::Action;
 use crate::actor::Actor;
@@ -80,12 +82,33 @@ pub trait Context<A: Actor>: Unpin + Send + 'static + Stream<Item = Work<A>> {
         A: Handler<T, Output = ()>,
         T: Send + 'static;
 
-    fn read<R, M, T>(&mut self, read: R, map: M)
-    where
+    fn read<R, M, N, T, E>(
+        &mut self,
+        read: R,
+        cap: usize,
+        map: M,
+        map_err: N,
+    ) where
         R: AsyncRead + Unpin + Send + 'static,
-        M: Fn(&mut [u8], usize) -> T + Unpin + Send + Sync + 'static,
-        A: Handler<T, Output = ()>,
-        T: Send + 'static;
+        M: Fn(Vec<u8>) -> T + Unpin + Send + Sync + 'static,
+        N: Fn(io::Error) -> E + Unpin + Send + Sync + 'static,
+        A: Handler<T, Output = ()> + Handler<E, Output = ()>,
+        T: Send + 'static,
+        E: Send + 'static;
+
+    fn write<W, M, N, T, E>(
+        &mut self,
+        write: W,
+        data: Vec<u8>,
+        map: M,
+        map_err: N,
+    ) where
+        W: AsyncWrite + Unpin + Send + 'static,
+        M: Fn((Vec<u8>, usize), W)  -> T + Unpin + Send + Sync + 'static,
+        N: Fn(io::Error) -> E + Unpin + Send + Sync + 'static,
+        A: Handler<T, Output = ()> + Handler<E, Output = ()>,
+        T: Send + 'static,
+        E: Send + 'static;
 }
 
 pub enum Work<A: Actor> {

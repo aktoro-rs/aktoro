@@ -2,15 +2,11 @@ use std::pin::Pin;
 use std::task::Context as FutContext;
 use std::task::Poll;
 
-use futures_io::Error as FutIOError;
-
 use crate::actor::Actor;
 
-pub type AsyncMessageFutOutput<A> = Box<dyn Message<Actor = A>>;
+pub type AsyncMessageOutput<A> = Box<dyn Message<Actor = A>>;
 
-pub type AsyncMessageStreamItem<A> = Option<Box<dyn Message<Actor = A>>>;
-
-pub type AsyncReadStreamItem<A> = Result<Box<dyn Message<Actor = A>>, FutIOError>;
+pub type AsyncMessageItem<A> = Option<Box<dyn Message<Actor = A>>>;
 
 pub trait Message: Send {
     type Actor: Actor;
@@ -28,7 +24,7 @@ pub trait AsyncMessageFut: Send {
     fn poll(
         self: Pin<&mut Self>,
         ctx: &mut FutContext,
-    ) -> Poll<AsyncMessageFutOutput<Self::Actor>>;
+    ) -> Poll<AsyncMessageOutput<Self::Actor>>;
 }
 
 pub trait AsyncMessageStream: Send {
@@ -37,7 +33,7 @@ pub trait AsyncMessageStream: Send {
     fn poll_next(
         self: Pin<&mut Self>,
         ctx: &mut FutContext,
-    ) -> Poll<AsyncMessageStreamItem<Self::Actor>>;
+    ) -> Poll<AsyncMessageItem<Self::Actor>>;
 }
 
 pub trait AsyncReadStream: Send {
@@ -46,7 +42,7 @@ pub trait AsyncReadStream: Send {
     fn poll_read(
         self: Pin<&mut Self>,
         ctx: &mut FutContext,
-    ) -> Poll<AsyncReadStreamItem<Self::Actor>>;
+    ) -> Poll<AsyncMessageOutput<Self::Actor>>;
 }
 
 pub trait Handler<M: Send>: Actor {
@@ -55,4 +51,12 @@ pub trait Handler<M: Send>: Actor {
     /// Handles the message, returning a result
     /// eventually containing the message's output.
     fn handle(&mut self, msg: M, ctx: &mut Self::Context) -> Result<Self::Output, Self::Error>;
+}
+
+impl<A: Actor> Handler<()> for A {
+    type Output = ();
+
+    fn handle(&mut self, _: (), _: &mut Self::Context) -> Result<(), Self::Error> {
+        Ok(())
+    }
 }

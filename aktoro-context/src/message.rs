@@ -6,8 +6,9 @@ use std::task::Poll;
 
 use aktoro_raw as raw;
 use futures_core::Stream;
+use futures_io as io;
 use futures_io::AsyncRead;
-use futures_io::Error as FutIOError;
+use futures_io::AsyncWrite;
 
 use crate::respond::Respond;
 
@@ -51,16 +52,36 @@ where
     _act: PhantomData<A>,
 }
 
-pub(crate) struct AsyncReadStream<A, R, M, T>
+pub(crate) struct AsyncReadStream<A, R, M, N, T, E>
 where
-    A: raw::Handler<T, Output = ()>,
+    A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()>,
     R: AsyncRead + Unpin + Send,
-    M: Fn(&mut [u8], usize) -> T + Send,
+    M: Fn(Vec<u8>) -> T + Send,
+    N: Fn(io::Error) -> E + Send,
     T: Send,
+    E: Send,
 {
+    cap: usize,
     buf: Vec<u8>,
     read: R,
     map: M,
+    map_err: N,
+    _act: PhantomData<A>,
+}
+
+pub(crate) struct AsyncWriteFut<A, W, M, N, T, E>
+where
+    A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()>,
+    W: AsyncWrite + Unpin + Send,
+    M: Fn((Vec<u8>, usize), W) -> T + Unpin + Send + Sync + 'static,
+    N: Fn(io::Error) -> E + Unpin + Send + Sync + 'static,
+    T: Send,
+    E: Send,
+{
+    data: Option<Vec<u8>>,
+    map: M,
+    map_err: N,
+    write: Option<W>,
     _act: PhantomData<A>,
 }
 
@@ -123,18 +144,45 @@ where
     }
 }
 
-impl<A, R, M, T> AsyncReadStream<A, R, M, T>
+impl<A, R, M, N, T, E> AsyncReadStream<A, R, M, N, T, E>
 where
-    A: raw::Handler<T, Output = ()>,
+    A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()>,
     R: AsyncRead + Unpin + Send,
-    M: Fn(&mut [u8], usize) -> T + Unpin + Send,
+    M: Fn(Vec<u8>) -> T + Unpin + Send,
+    N: Fn(io::Error) -> E + Unpin + Send,
     T: Send,
+    E: Send,
 {
-    pub(crate) fn new(read: R, map: M) -> Self {
+    pub(crate) fn new(read: R, cap: usize, map: M, map_err: N) -> Self {
+        let mut buf = Vec::with_capacity(cap);
+        buf.resize(cap, 0);
+
         AsyncReadStream {
-            buf: Vec::new(),
+            cap,
+            buf,
             read,
             map,
+            map_err,
+            _act: PhantomData,
+        }
+    }
+}
+
+impl<A, W, M, N, T, E> AsyncWriteFut<A, W, M, N, T, E>
+where
+    A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()>,
+    W: AsyncWrite + Unpin + Send,
+    M: Fn((Vec<u8>, usize), W)  -> T + Unpin + Send + Sync,
+    N: Fn(io::Error) -> E + Unpin + Send + Sync,
+    T: Send,
+    E: Send,
+{
+    pub(crate) fn new(write: W, data: Vec<u8>, map: M, map_err: N) -> Self {
+        AsyncWriteFut {
+            data: Some(data),
+            map,
+            map_err,
+            write: Some(write),
             _act: PhantomData,
         }
     }
@@ -184,7 +232,7 @@ where
 {
     type Actor = A;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Box<dyn raw::Message<Actor = A>>> {
+    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<raw::AsyncMessageOutput<Self::Actor>> {
         match Pin::new(&mut self.get_mut().fut).poll(ctx) {
             Poll::Ready(msg) => Poll::Ready(Box::new(AsyncMessage::new(msg))),
             Poll::Pending => Poll::Pending,
@@ -203,7 +251,7 @@ where
     fn poll_next(
         self: Pin<&mut Self>,
         ctx: &mut FutContext,
-    ) -> Poll<Option<Box<dyn raw::Message<Actor = A>>>> {
+    ) -> Poll<raw::AsyncMessageItem<Self::Actor>> {
         match Pin::new(&mut self.get_mut().stream).poll_next(ctx) {
             Poll::Ready(Some(msg)) => Poll::Ready(Some(Box::new(AsyncMessage::new(msg)))),
             Poll::Ready(None) => Poll::Ready(None),
@@ -212,28 +260,75 @@ where
     }
 }
 
-impl<A, R, M, T> raw::AsyncReadStream for AsyncReadStream<A, R, M, T>
+impl<A, R, M, N, T, E> raw::AsyncReadStream for AsyncReadStream<A, R, M, N, T, E>
 where
-    A: raw::Handler<T, Output = ()>,
+    A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()>,
     R: AsyncRead + Unpin + Send,
-    M: Fn(&mut [u8], usize) -> T + Unpin + Send,
+    M: Fn(Vec<u8>) -> T + Unpin + Send,
+    N: Fn(io::Error) -> E + Unpin + Send,
     T: Send + 'static,
+    E: Send + 'static,
 {
     type Actor = A;
 
     fn poll_read(
         self: Pin<&mut Self>,
         ctx: &mut FutContext,
-    ) -> Poll<Result<Box<dyn raw::Message<Actor = A>>, FutIOError>> {
+    ) -> Poll<raw::AsyncMessageOutput<Self::Actor>> {
         let stream = self.get_mut();
 
         match Pin::new(&mut stream.read).poll_read(ctx, &mut stream.buf) {
             Poll::Ready(Ok(read)) => {
-                let msg = (stream.map)(&mut stream.buf, read);
+                let data = stream.buf.drain(0..read).collect();
+                stream.buf.resize(stream.cap, 0);
 
-                Poll::Ready(Ok(Box::new(AsyncMessage::new(msg))))
+                let msg = (stream.map)(data);
+
+                Poll::Ready(Box::new(AsyncMessage::new(msg)))
             }
-            Poll::Ready(Err(err)) => Poll::Ready(Err(err)),
+            Poll::Ready(Err(err)) => {
+                let msg = (stream.map_err)(err);
+
+                Poll::Ready(Box::new(AsyncMessage::new(msg)))
+            }
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+impl<A, W, M, N, T, E> raw::AsyncMessageFut for AsyncWriteFut<A, W, M, N, T, E>
+where
+    A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()>,
+    W: AsyncWrite + Unpin + Send,
+    M: Fn((Vec<u8>, usize), W) -> T + Unpin + Send + Sync,
+    N: Fn(io::Error) -> E + Unpin + Send + Sync,
+    T: Send + 'static,
+    E: Send + 'static,
+{
+    type Actor = A;
+
+    fn poll(
+        self: Pin<&mut Self>,
+        ctx: &mut FutContext,
+    ) -> Poll<raw::AsyncMessageOutput<Self::Actor>> {
+        let fut = self.get_mut();
+
+        match Pin::new(&mut fut.write.as_mut().unwrap())
+            .poll_write(ctx, fut.data.as_ref().unwrap())
+        {
+            Poll::Ready(Ok(wrote)) => {
+                let msg = (fut.map)(
+                    (fut.data.take().unwrap(), wrote),
+                    fut.write.take().unwrap(),
+                );
+
+                Poll::Ready(Box::new(AsyncMessage::new(msg)))
+            }
+            Poll::Ready(Err(err)) => {
+                let msg = (fut.map_err)(err);
+
+                Poll::Ready(Box::new(AsyncMessage::new(msg)))
+            }
             Poll::Pending => Poll::Pending,
         }
     }

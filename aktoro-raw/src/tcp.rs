@@ -11,7 +11,7 @@ pub type TcpServerIncoming<'s, S, E> = Box<dyn Stream<Item = Result<S, E>> + Unp
 pub type OwnedTcpServerIncoming<S, E> = Box<dyn Stream<Item = Result<S, E>> + Unpin + Send>;
 
 pub trait TcpClient: TcpStream + Unpin + Send + Sized {
-    type Connect: Future<Output = Result<Self, <Self as TcpClient>::Error>>;
+    type Connect: Future<Output = Result<Self, <Self as TcpClient>::Error>> + Unpin + Send;
 
     type Error: StdError + Send;
 
