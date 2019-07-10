@@ -6,11 +6,11 @@ use futures_io::Error as FutIOError;
 
 use crate::actor::Actor;
 
-pub type AsyncMessageFutOutput = Box<dyn Message<Actor = Self::Actor>>;
+pub type AsyncMessageFutOutput<A> = Box<dyn Message<Actor = A>>;
 
-pub type AsyncMessageStreamItem = Option<Box<dyn Message<Actor = Self::Actor>>>;
+pub type AsyncMessageStreamItem<A> = Option<Box<dyn Message<Actor = A>>>;
 
-pub type AsyncReadStreamItem = Result<Box<dyn Message<Actor = Self::Actor>>, FutIOError>;
+pub type AsyncReadStreamItem<A> = Result<Box<dyn Message<Actor = A>>, FutIOError>;
 
 pub trait Message: Send {
     type Actor: Actor;
@@ -28,7 +28,7 @@ pub trait AsyncMessageFut: Send {
     fn poll(
         self: Pin<&mut Self>,
         ctx: &mut FutContext,
-    ) -> Poll<AsyncMessageFutOutput>;
+    ) -> Poll<AsyncMessageFutOutput<Self::Actor>>;
 }
 
 pub trait AsyncMessageStream: Send {
@@ -37,7 +37,7 @@ pub trait AsyncMessageStream: Send {
     fn poll_next(
         self: Pin<&mut Self>,
         ctx: &mut FutContext,
-    ) -> Poll<AsyncMessageStreamItem>;
+    ) -> Poll<AsyncMessageStreamItem<Self::Actor>>;
 }
 
 pub trait AsyncReadStream: Send {
@@ -46,7 +46,7 @@ pub trait AsyncReadStream: Send {
     fn poll_read(
         self: Pin<&mut Self>,
         ctx: &mut FutContext,
-    ) -> Poll<AsyncReadStreamItem>;
+    ) -> Poll<AsyncReadStreamItem<Self::Actor>>;
 }
 
 pub trait Handler<M: Send>: Actor {
