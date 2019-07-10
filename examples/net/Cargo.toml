@@ -6,7 +6,8 @@ authors = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
 edition = "2018"
 
 [dependencies]
-runtime = "0.3.0-alpha.6"
+futures-io-preview = "0.3.0-alpha.17"
+runtime            = "0.3.0-alpha.6"
 
 [dependencies.aktoro]
 path    = "../.."
