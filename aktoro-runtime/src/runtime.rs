@@ -177,10 +177,18 @@ impl Future for Wait {
             }
 
             // We remove the dead actors.
-            for actor in remove {
-                if rt.actors.remove(&actor).is_none() {
-                    wait.errors.push(Error::already_removed(actor));
+            for actor in &remove {
+                if rt.actors.remove(actor).is_none() {
+                    wait.errors.push(Error::already_removed(*actor));
                 }
+            }
+
+            // We restart the loop if actors
+            // were removed in case other
+            // actors stopped in the mean
+            // time.
+            if remove.len() > 0 {
+                continue;
             }
 
             // We try to poll from the actors'

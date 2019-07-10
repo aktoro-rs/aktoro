@@ -139,16 +139,21 @@ impl<A: raw::Actor> Actor<A> {
         // dead.
         self.ctx.set_status(A::Status::dead());
 
-        // We try to push the actor's
-        // new status over its update
-        // channel.
-        if let Err(err) = self.ctx.update() {
-            return Err(Box::new(err).into());
-        }
-
         // We try to notify the actor's
         // death over the killed channel.
         if let Err(err) = self.killed.killed(self.id) {
+            return Err(Box::new(err).into());
+        }
+
+        // We try to push the actor's
+        // new status over its update
+        // channel.
+        // NOTE: this is done after sending
+        //   the death notification because
+        //   if the `Spanwed` linked to
+        //   this actor has been dropped,
+        //   it will return an error.
+        if let Err(err) = self.ctx.update() {
             return Err(Box::new(err).into());
         }
 
