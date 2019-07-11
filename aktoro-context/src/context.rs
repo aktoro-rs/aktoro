@@ -7,6 +7,7 @@ use std::task::Poll;
 use aktoro_channel::error::TrySendError;
 use aktoro_raw as raw;
 use aktoro_raw::Updater as RawUpdater;
+use aktoro_raw::Wait as RawWait;
 use futures_core::Stream;
 use futures_io as io;
 use futures_io::AsyncRead;
@@ -26,13 +27,16 @@ use crate::message::AsyncMessageStream;
 use crate::message::AsyncReadStream;
 use crate::message::AsyncWriteFut;
 use crate::update;
+use crate::update::Update;
 use crate::update::Updated;
 use crate::update::Updater;
 
 /// An actor context using the [`aktoro-channel`] crate.
 ///
 /// [`aktoro-channel`]: https://docs.rs/aktoro-channel
-pub struct Context<A: raw::Actor> {
+pub struct Context<A: raw::Actor, R: raw::Runtime> {
+    // TODO
+    pub actor_id: u64,
     /// The actor's current status.
     status: A::Status,
     /// An actor's control channel sender.
@@ -48,6 +52,8 @@ pub struct Context<A: raw::Actor> {
     streams: Vec<Pin<Box<dyn raw::AsyncMessageStream<Actor = A>>>>,
     // TODO
     reads: Vec<Pin<Box<dyn raw::AsyncReadStream<Actor = A>>>>,
+    // TODO
+    rt: Option<R>,
     /// A list of the actor's unhandled events.
     events: VecDeque<Box<dyn raw::Event<Actor = A>>>,
     /// An actor's message channel sender.
@@ -60,15 +66,16 @@ pub struct Context<A: raw::Actor> {
     updted: Option<Updated<A>>,
 }
 
-impl<A> raw::Context<A> for Context<A>
+impl<A, RT> raw::Context<A> for Context<A, RT>
 where
-    A: raw::Actor,
+    A: raw::Actor + 'static,
+    RT: raw::Runtime,
 {
     type Controller = Controller<A>;
     type Sender = Sender<A>;
     type Updater = Updater<A>;
 
-    fn new() -> Context<A> {
+    fn new(actor_id: u64) -> Context<A, RT> {
         // We create the actor's control, message and
         // update channels.
         let (ctrler, ctrled) = control::new();
@@ -76,6 +83,7 @@ where
         let (updter, updted) = update::new();
 
         Context {
+            actor_id,
             status: A::Status::default(),
             ctrler,
             ctrled,
@@ -83,6 +91,7 @@ where
             futs: Vec::new(),
             streams: Vec::new(),
             reads: Vec::new(),
+            rt: None,
             events: VecDeque::new(),
             sender,
             recver,
@@ -110,9 +119,11 @@ where
         }
     }
 
-    fn update(&mut self) -> Result<(), TrySendError<A::Status>> {
+    fn update(&mut self) -> Result<(), TrySendError<Update<A>>> {
         self.update = false;
-        self.updter.try_send(self.status.clone())
+        self.updter.try_send(
+            Update::new(self.actor_id, self.status.clone()),
+        )
     }
 
     fn controller(&self) -> &Controller<A> {
@@ -141,6 +152,28 @@ where
 
     fn updater(&mut self) -> &mut Updater<A> {
         &mut self.updter
+    }
+
+    fn actors(&self) -> Vec<u64> {
+        if let Some(rt) = &self.rt {
+            rt.actors()
+        } else {
+            vec![]
+        }
+    }
+
+    fn spawn<S>(&mut self, actor: S) -> Option<raw::Spawned<S>>
+    where
+        S: raw::Actor + 'static,
+    {
+        let rt = if let Some(rt) = &mut self.rt {
+            rt
+        } else {
+            self.rt = Some(RT::default());
+            self.rt.as_mut().unwrap()
+        };
+
+        rt.spawn(actor)
     }
 
     fn wait<F, M, O, T>(&mut self, fut: F, map: M)
@@ -191,9 +224,10 @@ where
     }
 }
 
-impl<A> Stream for Context<A>
+impl<A, R> Stream for Context<A, R>
 where
     A: raw::Actor,
+    R: raw::Runtime,
 {
     type Item = raw::Work<A>;
 
@@ -234,6 +268,23 @@ where
             }
             Poll::Ready(None) => return Poll::Ready(None),
             Poll::Pending => (),
+        }
+
+        // TODO
+        if let Some(rt) = context.rt.take() {
+            let mut wait = rt.wait();
+
+            loop {
+                if wait.runtime().actors().is_empty() {
+                    break;
+                }
+
+                if let Poll::Pending = Pin::new(&mut wait).poll_next(ctx) {
+                    break;
+                }
+            }
+
+            context.rt = Some(wait.into_runtime());
         }
 
         // TODO

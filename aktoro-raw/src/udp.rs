@@ -8,8 +8,8 @@ pub type UdpSocketSendTo<'s, E> = Box<dyn Future<Output = Result<usize, E>> + 's
 
 pub type UdpSocketRecv<'s, E> = Box<dyn Future<Output = Result<(usize, SocketAddr), E>> + 's>;
 
-pub trait UdpSocket: Unpin + Send + Sized + 'static {
-    type Error: StdError + Send;
+pub trait UdpSocket: Unpin + Send + Sized {
+    type Error: StdError + Send + 'static;
 
     /// Tries to create a new UDP socket that
     /// will be bound to the given address.

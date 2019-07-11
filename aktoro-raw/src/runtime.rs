@@ -1,11 +1,18 @@
 use std::error::Error as StdError;
-use std::future::Future;
+
+use futures_core::Stream;
 
 use crate::actor::Actor;
 use crate::net::NetworkManager;
 use crate::spawned::Spawned;
 
-pub trait Runtime {
+pub trait Wait<R: Runtime>: Stream<Item = Result<u64, (u64, R::Error)>> + Unpin + Send {
+    fn runtime(&self) -> &R;
+
+    fn into_runtime(self) -> R;
+}
+
+pub trait Runtime: Default + Unpin + Send {
     /// The type that is handling the types of
     /// the TCP socket client and server and
     /// of the UDP socket that actors can use
@@ -14,21 +21,13 @@ pub trait Runtime {
     /// runtime implementation).
     type NetworkManager: NetworkManager;
 
-    /// The future returned after calling the
-    /// [`stop`] method. It will resolve after
-    /// all the actors have been stopped.
-    ///
-    /// [`stop`]: #method.stop
-    type Stop: Future<Output = Result<(), Self::Error>>;
+    // TODO
+    type Wait: Wait<Self>;
 
-    /// The future returned after calling the
-    /// [`wait`] method. It will resolve after
-    /// all the actors have been stopped.
-    ///
-    /// [`wait`]: #method.wait
-    type Wait: Future<Output = Result<(), Self::Error>>;
+    type Error: StdError + Send + 'static;
 
-    type Error: StdError + Send;
+    // TODO
+    fn actors(&self) -> Vec<u64>;
 
     /// Spawns a new actor on the runtime,
     /// returning [`Some(Spawned<A>)`] if it
@@ -38,7 +37,9 @@ pub trait Runtime {
     ///
     /// [`Some(Spawned<A>)`]: sturct.Spawned.html
     /// [`Actor::starting`]: trait.Actor.html#method.starting
-    fn spawn<A: Actor>(&mut self, actor: A) -> Option<Spawned<A>>;
+    fn spawn<A>(&mut self, actor: A) -> Option<Spawned<A>>
+    where
+        A: Actor + 'static;
 
     /// Creates a new network manager, that
     /// can then be used by an actor to
@@ -46,13 +47,9 @@ pub trait Runtime {
     /// an UDP socket.
     fn net(&mut self) -> Self::NetworkManager;
 
-    /// Asks to all the actors managed by the
-    /// runtime to stop, returning a future
-    /// resolving after all of them have been
-    /// stopped.
-    fn stop(self) -> Self::Stop;
-
-    /// Waits for all the actors to be stopped,
-    /// returning a future waiting for it.
+    // TODO
     fn wait(self) -> Self::Wait;
+
+    // TODO
+    fn stop(&mut self);
 }

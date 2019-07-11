@@ -13,15 +13,16 @@ use crate::event::Event;
 use crate::event::EventHandler;
 use crate::message::Handler;
 use crate::message::Message;
+use crate::spawned::Spawned;
 use crate::update::Updater;
 
-pub trait Context<A: Actor>: Unpin + Send + 'static + Stream<Item = Work<A>> {
+pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send {
     type Controller: Controller<A>;
     type Sender: Sender<A>;
     type Updater: Updater<A>;
 
-    /// Creates a new context for an actor.
-    fn new() -> Self;
+    // TODO
+    fn new(actor_id: u64) -> Self;
 
     /// Emits an event that will be handled by the
     /// actor.
@@ -68,6 +69,15 @@ pub trait Context<A: Actor>: Unpin + Send + 'static + Stream<Item = Work<A>> {
     /// update channel receiver.
     fn updater(&mut self) -> &mut Self::Updater;
 
+    // TODO
+    fn actors(&self) -> Vec<u64>;
+
+    // TODO
+    fn spawn<S>(&mut self, actor: S) -> Option<Spawned<S>>
+    where
+        S: Actor + 'static;
+
+    // TODO
     fn wait<F, M, O, T>(&mut self, fut: F, map: M)
     where
         F: Future<Output = O> + Unpin + Send + 'static,
@@ -75,6 +85,7 @@ pub trait Context<A: Actor>: Unpin + Send + 'static + Stream<Item = Work<A>> {
         A: Handler<T, Output = ()>,
         T: Send + 'static;
 
+    // TODO
     fn subscribe<S, M, I, T>(&mut self, stream: S, map: M)
     where
         S: Stream<Item = I> + Unpin + Send + 'static,
@@ -82,6 +93,7 @@ pub trait Context<A: Actor>: Unpin + Send + 'static + Stream<Item = Work<A>> {
         A: Handler<T, Output = ()>,
         T: Send + 'static;
 
+    // TODO
     fn read<R, M, N, T, E>(&mut self, read: R, cap: usize, map: M, map_err: N)
     where
         R: AsyncRead + Unpin + Send + 'static,
@@ -91,6 +103,7 @@ pub trait Context<A: Actor>: Unpin + Send + 'static + Stream<Item = Work<A>> {
         T: Send + 'static,
         E: Send + 'static;
 
+    // TODO
     fn write<W, M, N, T, E>(&mut self, write: W, data: Vec<u8>, map: M, map_err: N)
     where
         W: AsyncWrite + Unpin + Send + 'static,

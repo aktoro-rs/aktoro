@@ -2,12 +2,12 @@ use std::error::Error as StdError;
 
 use crate::context::Context;
 
-pub trait Actor: Unpin + Send + Sized + 'static {
+pub trait Actor: Unpin + Send + Sized {
     type Context: Context<Self>;
 
     type Status: Status + Unpin;
 
-    type Error: StdError + Send;
+    type Error: StdError + Send + 'static;
 
     #[allow(unused)]
     /// Called when the actor's context has been created
@@ -30,7 +30,7 @@ pub trait Actor: Unpin + Send + Sized + 'static {
     fn stopped(&mut self, ctx: &mut Self::Context) {}
 }
 
-pub trait Status: PartialEq + Default + Clone + Send {
+pub trait Status: PartialEq + Default + Clone + Unpin + Send {
     /// Returns the status that an actor should have
     /// before [`Actor::starting`] is called.
     ///

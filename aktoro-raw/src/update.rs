@@ -3,15 +3,23 @@ use std::error::Error as StdError;
 use futures_core::Stream;
 
 use crate::actor::Actor;
+use crate::actor::Status;
 
-pub trait Updater<A: Actor> {
-    type Updated: Updated<A>;
+pub trait Update: Status + Unpin + Send {
+    fn actor_id(&self) -> u64;
 
-    type Error: StdError + Send;
-
-    /// Tries to send a status update over
-    /// the actor's update channel.
-    fn try_send(&mut self, status: A::Status) -> Result<(), Self::Error>;
+    fn set_actor_id(&mut self, id: u64);
 }
 
-pub trait Updated<A: Actor>: Stream<Item = A::Status> {}
+pub trait Updater<A: Actor>: Unpin + Send {
+    type Update: Update;
+
+    type Updated: Updated<Self::Update>;
+
+    type Error: StdError + Send + 'static;
+
+    // TODO
+    fn try_send(&mut self, update: Self::Update) -> Result<(), Self::Error>;
+}
+
+pub trait Updated<U: Update>: Stream<Item = U> + Unpin + Send {}

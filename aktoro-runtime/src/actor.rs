@@ -26,7 +26,7 @@ pub(crate) struct Actor<A: raw::Actor> {
     killed: KilledSender,
 }
 
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 /// A default implementation for the
 /// [`aktoro-raw::Status`] trait.
 ///
@@ -221,7 +221,10 @@ impl KilledSender {
     }
 }
 
-impl<A: raw::Actor> Future for Actor<A> {
+impl<A> Future for Actor<A>
+where
+    A: raw::Actor + 'static,
+{
     type Output = Result<(), Error>;
 
     fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Self::Output> {

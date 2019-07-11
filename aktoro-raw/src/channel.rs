@@ -16,10 +16,10 @@ use crate::message::Message;
 /// [`Sender::try_send`]: trait.Sender.html#method.try_send
 pub type SenderRes<'s, O, E> = Result<BoxFuture<'s, Result<O, E>>, E>;
 
-pub trait Sender<A: Actor>: Clone {
+pub trait Sender<A: Actor>: Unpin + Clone + Send {
     type Receiver: Receiver<A>;
 
-    type Error: StdError + Send;
+    type Error: StdError + Send + 'static;
 
     /// Tries to send a message to be handled by the
     /// actor.
@@ -29,4 +29,4 @@ pub trait Sender<A: Actor>: Clone {
         M: Send + 'static;
 }
 
-pub trait Receiver<A: Actor>: Stream<Item = Box<dyn Message<Actor = A>>> {}
+pub trait Receiver<A: Actor>: Stream<Item = Box<dyn Message<Actor = A>>> + Unpin + Send {}

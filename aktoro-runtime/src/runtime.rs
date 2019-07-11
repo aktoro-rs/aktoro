@@ -41,19 +41,8 @@ pub struct Runtime {
     rng: Xoshiro512StarStar,
 }
 
-/// A future that resolves when all the
-/// runtime's actors have been stopped.
-pub struct Stop(Wait);
-
-/// A future that resolves when all the
-/// runtime's actors have been stopped.
-pub struct Wait {
-    rt: Runtime,
-    /// Contains a list of all the errors
-    /// that happened while waiting for
-    /// the actors to stop.
-    errors: Vec<Error>,
-}
+// TODO
+pub struct Wait(Runtime);
 
 impl Runtime {
     /// Creates a new `Runtime`.
@@ -65,21 +54,27 @@ impl Runtime {
 impl raw::Runtime for Runtime {
     type NetworkManager = NetworkManager;
 
-    type Stop = Stop;
     type Wait = Wait;
 
     type Error = Error;
 
-    fn spawn<A: raw::Actor>(&mut self, actor: A) -> Option<raw::Spawned<A>> {
+    fn actors(&self) -> Vec<u64> {
+        self.actors.keys().copied().collect()
+    }
+
+    fn spawn<A>(&mut self, actor: A) -> Option<raw::Spawned<A>>
+    where
+        A: raw::Actor + 'static,
+    {
+        // Generate the actor's ID.
+        let id = self.rng.next_u64();
+
         // Create a new context for the actor.
-        let mut ctx = A::Context::new();
+        let mut ctx = A::Context::new(id);
 
         // Create a new `Spawned` struct from
         // the actor's context.
         let spawned = raw::Spawned::new(&mut ctx);
-
-        // Generate the actor's ID.
-        let id = self.rng.next_u64();
 
         // Create the actor's kill channel.
         let (sender, recver) = actor::new_kill();
@@ -102,117 +97,79 @@ impl raw::Runtime for Runtime {
         NetworkManager
     }
 
-    /// Asks to all the actors managed by the
-    /// runtime to stop, returning a future
-    /// resolving after all of them have been
-    /// stopped.
-    ///
-    /// ## Note
-    ///
-    /// Calling this method and polling the
-    /// returned future might be required to
-    /// poll the actors a first time, making
-    /// this method kind of useless if that's
-    /// the case.
-    fn stop(mut self) -> Stop {
-        // Ask for each actor to stop.
+    // TODO
+    fn wait(self) -> Wait {
+        Wait(self)
+    }
+
+    // TODO
+    fn stop(&mut self) {
+        // Ask to every actor to stop.
         for (_, actor) in self.actors.iter_mut() {
             actor.0.kill();
         }
-
-        Stop(self.wait())
-    }
-
-    /// Waits for all the actors to be stopped,
-    /// returning a future waiting for it.
-    ///
-    /// ## Note
-    ///
-    /// Calling this method and polling the
-    /// returned future might be required to
-    /// poll the actors a first time.
-    fn wait(self) -> Wait {
-        Wait {
-            rt: self,
-            errors: vec![],
-        }
     }
 }
 
-impl Future for Stop {
-    type Output = Result<(), Error>;
+impl raw::Wait<Runtime> for Wait {
+    fn runtime(&self) -> &Runtime {
+        &self.0
+    }
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Result<(), Error>> {
-        // `Stop` is just a wrapper
-        // arround `Wait` (what differs
-        // is what happens before it
-        // is returned by the `stop`
-        // method).
-        Pin::new(&mut self.get_mut().0).poll(ctx)
+    fn into_runtime(self) -> Runtime {
+        self.0
     }
 }
 
-impl Future for Wait {
-    type Output = Result<(), Error>;
+impl Stream for Wait {
+    type Item = Result<u64, (u64, Error)>;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Result<(), Error>> {
-        let wait = self.get_mut();
-        let rt = &mut wait.rt;
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<Result<u64, (u64, Error)>>> {
+        let rt = &mut self.get_mut().0;
 
-        loop {
-            if rt.actors.is_empty() {
-                return Poll::Ready(Ok(()));
-            }
+        if rt.actors.is_empty() {
+            return Poll::Ready(None);
+        }
 
-            // We poll all the actors' handle.
-            let mut remove = vec![];
-            for (id, act) in rt.actors.iter_mut() {
-                if let Poll::Ready(res) = Pin::new(&mut act.1).poll(ctx) {
-                    remove.push(*id);
-
-                    if let Err(err) = res {
-                        wait.errors.push(err);
-                    }
-                }
-            }
-
-            // We remove the dead actors.
-            for actor in &remove {
-                if rt.actors.remove(actor).is_none() {
-                    wait.errors.push(Error::already_removed(*actor));
-                }
-            }
-
-            // We restart the loop if actors
-            // were removed in case other
-            // actors stopped in the mean
-            // time.
-            if !remove.is_empty() {
-                continue;
-            }
-
-            // We try to poll from the actors'
-            // kill channel's receiver.
-            match Pin::new(&mut rt.recver).poll_next(ctx) {
-                Poll::Ready(Some(actor)) => {
-                    if rt.actors.remove(&actor).is_none() {
-                        wait.errors.push(Error::already_removed(actor));
-                    }
-                }
-                // If the channel has been closed,
-                // we stop the future.
-                Poll::Ready(None) => {
-                    if wait.errors.len() > 1 {
-                        return Poll::Ready(Err(Error::multiple(wait.errors.split_off(0))));
-                    } else if wait.errors.len() == 1 {
-                        return Poll::Ready(Err(wait.errors.pop().unwrap()));
-                    } else {
-                        return Poll::Ready(Ok(()));
-                    }
-                }
-                Poll::Pending => return Poll::Pending,
+        // TODO
+        let mut remove = None;
+        for (id, act) in rt.actors.iter_mut() {
+            if let Poll::Ready(res) = Pin::new(&mut act.1).poll(ctx) {
+                remove = Some((*id, res));
             }
         }
+
+        // TODO
+        if let Some((id, res)) = remove {
+            let removed = rt.actors.remove(&id);
+
+            match (removed, res) {
+                (Some(_), Err(err)) => return Poll::Ready(Some(Err((id, err)))),
+                (None, Err(err)) => return Poll::Ready(Some(Err((
+                    id,
+                    Error::multiple(vec![
+                        Error::already_removed(id),
+                        Error::std(err),
+                    ]),
+                )))),
+                _ => return Poll::Ready(Some(Ok(id))),
+            }
+        }
+
+        // TODO
+        match Pin::new(&mut rt.recver).poll_next(ctx) {
+            Poll::Ready(Some(actor)) => {
+                if rt.actors.remove(&actor).is_none() {
+                    return Poll::Ready(Some(Err((actor, Error::already_removed(actor)))));
+                } else {
+                    return Poll::Ready(Some(Ok(actor)));
+                }
+            }
+            Poll::Ready(None) => return Poll::Ready(None),
+            Poll::Pending => (),
+        }
+
+        Poll::Pending
     }
 }
 

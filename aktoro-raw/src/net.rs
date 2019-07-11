@@ -10,7 +10,7 @@ type TcpBindRes<S> = Result<S, <S as TcpServer>::Error>;
 
 type UdpBindRes<S> = Result<S, <S as UdpSocket>::Error>;
 
-pub trait NetworkManager: Unpin + Send + Sync {
+pub trait NetworkManager: Unpin + Send {
     /// The type of the TCP socket client
     /// that actors can use to be compatible
     /// with the runtime (this might not be

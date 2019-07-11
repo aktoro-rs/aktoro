@@ -40,7 +40,7 @@ pub(crate) fn new<A: raw::Actor>() -> (Sender<A>, Receiver<A>) {
 
 impl<A> raw::Sender<A> for Sender<A>
 where
-    A: raw::Actor,
+    A: raw::Actor + 'static,
 {
     type Receiver = Receiver<A>;
 

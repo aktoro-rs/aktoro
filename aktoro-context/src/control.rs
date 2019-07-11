@@ -40,7 +40,7 @@ pub(crate) fn new<A: raw::Actor>() -> (Controller<A>, Controlled<A>) {
 
 impl<A> raw::Controller<A> for Controller<A>
 where
-    A: raw::Actor,
+    A: raw::Actor + 'static,
 {
     type Controlled = Controlled<A>;
 

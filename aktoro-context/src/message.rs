@@ -223,7 +223,7 @@ where
 
 impl<A, F, M> raw::AsyncMessageFut for AsyncMessageFut<A, F, M>
 where
-    A: raw::Handler<M, Output = ()>,
+    A: raw::Handler<M, Output = ()> + 'static,
     F: Future<Output = M> + Unpin + Send,
     M: Send + 'static,
 {
@@ -242,7 +242,7 @@ where
 
 impl<A, S, M> raw::AsyncMessageStream for AsyncMessageStream<A, S, M>
 where
-    A: raw::Handler<M, Output = ()>,
+    A: raw::Handler<M, Output = ()> + 'static,
     S: Stream<Item = M> + Unpin + Send,
     M: Send + 'static,
 {
@@ -262,7 +262,7 @@ where
 
 impl<A, R, M, N, T, E> raw::AsyncReadStream for AsyncReadStream<A, R, M, N, T, E>
 where
-    A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()>,
+    A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()> + 'static,
     R: AsyncRead + Unpin + Send,
     M: Fn(Vec<u8>) -> T + Unpin + Send,
     N: Fn(io::Error) -> E + Unpin + Send,
@@ -298,7 +298,7 @@ where
 
 impl<A, W, M, N, T, E> raw::AsyncMessageFut for AsyncWriteFut<A, W, M, N, T, E>
 where
-    A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()>,
+    A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()> + 'static,
     W: AsyncWrite + Unpin + Send,
     M: Fn((Vec<u8>, usize), W) -> T + Unpin + Send + Sync,
     N: Fn(io::Error) -> E + Unpin + Send + Sync,

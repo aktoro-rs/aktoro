@@ -20,21 +20,25 @@ type SenderError<A> = <Sender<A> as RawSender<A>>::Error;
 type Controller<A> = <<A as Actor>::Context as Context<A>>::Controller;
 type ControllerError<A> = <Controller<A> as RawController<A>>::Error;
 
+type Update<A> = <<<A as Actor>::Context as Context<A>>::Updater as Updater<A>>::Update;
 type Updated<A> = <<<A as Actor>::Context as Context<A>>::Updater as Updater<A>>::Updated;
 
 /// A wrapper around an actor's
 /// message, control and update
 /// channels.
 pub struct Spawned<A: Actor> {
+    // TODO
     sender: Sender<A>,
+    // TODO
     ctrler: Controller<A>,
+    // TODO
     updted: Option<Updated<A>>,
 }
 
 impl<A: Actor> Spawned<A> {
     /// Creates a new `Spawned` struct from an actor's
     /// context.
-    pub fn new(ctx: &mut A::Context) -> Spawned<A> {
+    pub fn new(ctx: &mut A::Context) -> Self {
         Spawned {
             sender: ctx.sender().clone(),
             ctrler: ctx.controller().clone(),
@@ -96,14 +100,10 @@ impl<A: Actor> Spawned<A> {
 
 impl<A: Actor> Unpin for Spawned<A> {}
 
-impl<A> Stream for Spawned<A>
-where
-    A: Actor,
-    Updated<A>: Unpin,
-{
-    type Item = A::Status;
+impl<A: Actor> Stream for Spawned<A> {
+    type Item = Update<A>;
 
-    fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<A::Status>> {
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<Update<A>>> {
         if let Some(updted) = &mut self.get_mut().updted {
             Pin::new(updted).poll_next(ctx)
         } else {
@@ -112,10 +112,7 @@ where
     }
 }
 
-impl<A> Clone for Spawned<A>
-where
-    A: Actor,
-{
+impl<A: Actor> Clone for Spawned<A> {
     fn clone(&self) -> Self {
         Spawned {
             sender: self.sender.clone(),
