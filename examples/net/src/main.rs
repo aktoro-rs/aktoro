@@ -104,9 +104,7 @@ where
         println!("new connection from {}", conn.peer_addr().unwrap());
 
         let (read, _) = conn.split();
-        let spawned = ctx.spawn(Agent {
-            read: Some(read),
-        }).unwrap();
+        let spawned = ctx.spawn(Agent { read: Some(read) }).unwrap();
 
         ctx.subscribe(spawned, |_| Died);
 

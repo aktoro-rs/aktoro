@@ -124,7 +124,10 @@ impl raw::Wait<Runtime> for Wait {
 impl Stream for Wait {
     type Item = Result<u64, (u64, Error)>;
 
-    fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<Result<u64, (u64, Error)>>> {
+    fn poll_next(
+        self: Pin<&mut Self>,
+        ctx: &mut FutContext,
+    ) -> Poll<Option<Result<u64, (u64, Error)>>> {
         let rt = &mut self.get_mut().0;
 
         if rt.actors.is_empty() {
@@ -145,13 +148,12 @@ impl Stream for Wait {
 
             match (removed, res) {
                 (Some(_), Err(err)) => return Poll::Ready(Some(Err((id, err)))),
-                (None, Err(err)) => return Poll::Ready(Some(Err((
-                    id,
-                    Error::multiple(vec![
-                        Error::already_removed(id),
-                        Error::std(err),
-                    ]),
-                )))),
+                (None, Err(err)) => {
+                    return Poll::Ready(Some(Err((
+                        id,
+                        Error::multiple(vec![Error::already_removed(id), Error::std(err)]),
+                    ))))
+                }
                 _ => return Poll::Ready(Some(Ok(id))),
             }
         }

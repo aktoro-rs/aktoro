@@ -49,10 +49,7 @@ where
     A: raw::Actor,
 {
     pub(crate) fn new(actor_id: u64, status: A::Status) -> Self {
-        Update {
-            actor_id,
-            status,
-        }
+        Update { actor_id, status }
     }
 }
 
@@ -162,8 +159,7 @@ where
     A: raw::Actor,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.actor_id == other.actor_id &&
-            self.status == other.status
+        self.actor_id == other.actor_id && self.status == other.status
     }
 }
 

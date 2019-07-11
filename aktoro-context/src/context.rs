@@ -121,9 +121,8 @@ where
 
     fn update(&mut self) -> Result<(), TrySendError<Update<A>>> {
         self.update = false;
-        self.updter.try_send(
-            Update::new(self.actor_id, self.status.clone()),
-        )
+        self.updter
+            .try_send(Update::new(self.actor_id, self.status.clone()))
     }
 
     fn controller(&self) -> &Controller<A> {
