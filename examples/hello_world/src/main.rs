@@ -1,9 +1,9 @@
 #![feature(async_await)]
 
-use std::task::Poll;
-
 use aktoro::prelude::*;
-use futures_util::poll;
+use futures_util::select;
+use futures_util::FutureExt;
+use futures_util::StreamExt;
 
 struct HelloActor;
 
@@ -13,7 +13,7 @@ struct Bye(&'static str);
 struct Kill;
 
 impl Actor for HelloActor {
-    type Context = Context<Self>;
+    type Context = Context<Self, Runtime>;
     type Status = Status;
     type Error = Error;
 }
@@ -21,7 +21,7 @@ impl Actor for HelloActor {
 impl Handler<Hello> for HelloActor {
     type Output = String;
 
-    fn handle(&mut self, msg: Hello, _: &mut Context<Self>) -> Result<String, Error> {
+    fn handle(&mut self, msg: Hello, _: &mut Self::Context) -> Result<String, Error> {
         Ok(format!("Hello, {}!", msg.0))
     }
 }
@@ -29,7 +29,7 @@ impl Handler<Hello> for HelloActor {
 impl Handler<Bye> for HelloActor {
     type Output = String;
 
-    fn handle(&mut self, msg: Bye, _: &mut Context<Self>) -> Result<String, Error> {
+    fn handle(&mut self, msg: Bye, _: &mut Self::Context) -> Result<String, Error> {
         Ok(format!("Bye, {}!", msg.0))
     }
 }
@@ -37,8 +37,8 @@ impl Handler<Bye> for HelloActor {
 impl ActionHandler<Kill> for HelloActor {
     type Output = ();
 
-    fn handle(&mut self, _: Kill, ctx: &mut Context<Self>) -> Result<(), Error> {
-        ctx.set_status(Status::Stopped);
+    fn handle(&mut self, _: Kill, ctx: &mut Self::Context) -> Result<(), Error> {
+        ctx.set_status(Status::Dead);
         Ok(())
     }
 }
@@ -49,17 +49,17 @@ async fn main() {
 
     let spawned = rt.spawn(HelloActor).unwrap();
 
-    let mut run = runtime::spawn(run("World", spawned));
-    let mut wait = rt.wait();
+    let mut run = runtime::spawn(run("World", spawned)).fuse();
+    let mut wait = rt.wait().fuse();
 
     loop {
-        if let Poll::Ready(_) = poll!(&mut run) {
-            break;
-        }
-
-        if let Poll::Ready(res) = poll!(&mut wait) {
-            res.expect("an error occured while waiting for the runtime to stop");
-            break;
+        select! {
+            _ = run => break,
+            res = wait.next() => {
+                res.unwrap()
+                    .expect("an error occured while waiting for the runtime to stop");
+                break;
+            },
         }
     }
 }
