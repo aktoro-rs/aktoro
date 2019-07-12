@@ -7,12 +7,15 @@ use aktoro_channel::error::TrySendError;
 use aktoro_raw as raw;
 use futures_core::Stream;
 
-// TODO
+/// A wrapper around an actor's status,
+/// containing its identifier.
 pub struct Update<A>
 where
     A: raw::Actor,
 {
+    /// The actor's identifier.
     actor_id: u64,
+    /// The actor's new status.
     status: A::Status,
 }
 

@@ -1,8 +1,12 @@
 use crossbeam_queue::ArrayQueue;
 use crossbeam_queue::SegQueue;
 
+/// The queue used by the channels to send
+/// and receive data.
 pub(crate) enum Queue<T> {
+    /// The bounded queue variant.
     Bounded(ArrayQueue<T>),
+    /// The unbounded queue variant.
     Unbounded(SegQueue<T>),
 }
 

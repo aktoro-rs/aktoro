@@ -18,7 +18,9 @@ pub trait Updater<A: Actor>: Unpin + Send {
 
     type Error: error::Error + Send + 'static;
 
-    // TODO
+    /// Tries to send an update to be handled by
+    /// whatever is holding the update channel's
+    /// receiver.
     fn try_send(&mut self, update: Self::Update) -> Result<(), Self::Error>;
 }
 

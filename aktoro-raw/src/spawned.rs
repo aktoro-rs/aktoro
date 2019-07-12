@@ -27,11 +27,14 @@ type Updated<A> = <<<A as Actor>::Context as Context<A>>::Updater as Updater<A>>
 /// message, control and update
 /// channels.
 pub struct Spawned<A: Actor> {
-    // TODO
+    /// The actor's message channel's
+    /// sender.
     sender: Sender<A>,
-    // TODO
+    /// The actor's control channel's
+    /// sender.
     ctrler: Controller<A>,
-    // TODO
+    /// The actor's update channel's
+    /// receiver.
     updted: Option<Updated<A>>,
 }
 

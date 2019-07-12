@@ -30,8 +30,16 @@ use crate::update::Update;
 use crate::update::Updated;
 use crate::update::Updater;
 
-// TODO
+/// The configuration that is used by [`Context`].
+///
+/// ## Note
+///
+/// This is only used when spawning sub-actors and
+/// shoudln't be used elsewhere.
 pub struct ContextConfig {
+    /// Whether the context should wait to get
+    /// notified before starting to handle
+    /// messages, events, etc.
     ready: Option<Notify>,
 }
 
@@ -39,9 +47,12 @@ pub struct ContextConfig {
 ///
 /// [`aktoro-channel`]: https://docs.rs/aktoro-channel
 pub struct Context<A: raw::Actor, R: raw::Runtime> {
-    // TODO
+    /// The identifier of the actor, as used by
+    /// the runtime.
     actor_id: u64,
-    // TODO
+    /// Whether the context should wait to get
+    /// notified before starting to handle
+    /// messages, events, etc.
     ready: Option<Notify>,
     /// The actor's current status.
     status: A::Status,
@@ -52,17 +63,26 @@ pub struct Context<A: raw::Actor, R: raw::Runtime> {
     /// Whether the status has been recently updated
     /// and the runtime should be notified.
     update: bool,
-    // TODO
+    /// A list of futures that should be fully
+    /// executed before handling messages, events,
+    /// non-blocking futures, etc.
     b_futs: Vec<Pin<Box<dyn raw::AsyncMessageFut<Actor = A>>>>,
-    // TODO
+    /// A list of futures that the context should
+    /// give the output to the actor as a message.
     futs: Vec<Pin<Box<dyn raw::AsyncMessageFut<Actor = A>>>>,
-    // TODO
+    /// A list of streams that the context should
+    /// give the yielded items to the actor as
+    /// messages.
     streams: Vec<Pin<Box<dyn raw::AsyncMessageStream<Actor = A>>>>,
-    // TODO
+    /// A list of asynchronous readers that the
+    /// context should forward the data to the
+    /// actor as messages.
     reads: Vec<Pin<Box<dyn raw::AsyncReadStream<Actor = A>>>>,
-    // TODO
+    /// An eventual inner runtime that the context
+    /// can use to run/spawn sub-actors.
     rt: Option<R>,
-    // TODO
+    /// A list of contexts that should be notified
+    /// when all blocking futures have been handled.
     to_notify: Vec<Notify>,
     /// A list of the actor's unhandled events.
     events: VecDeque<Box<dyn raw::Event<Actor = A>>>,
@@ -331,6 +351,8 @@ where
         let context = self.get_mut();
         let mut ret = None;
 
+        // If the context hasn't been marked as being
+        // ready yet, we try to see if it should be now.
         if let Some(ready) = context.ready.as_mut() {
             match Pin::new(ready).poll(ctx) {
                 Poll::Ready(()) => {
@@ -358,7 +380,9 @@ where
             return Poll::Ready(Some(raw::Work::Update));
         }
 
-        // TODO
+        // We try to poll all blocking futures until they
+        // all finished executing, making the actor handle
+        // the returned messages as they are yielded.
         let mut to_remove = vec![];
         for (i, fut) in context.b_futs.iter_mut().enumerate() {
             match fut.as_mut().poll(ctx) {
@@ -373,17 +397,24 @@ where
             }
         }
 
+        // We remove the fully executed futures.
         for to_remove in to_remove {
             context.b_futs.remove(to_remove);
         }
 
+        // We eventually return the output of the first
+        // fully executed future...
         if let Some(ret) = ret {
             return Poll::Ready(Some(ret));
+        // ...or we wait if all blocking futures havn't
+        // fully executed.
         } else if !context.b_futs.is_empty() {
             return Poll::Pending;
         }
 
-        // TODO
+        // If there are no more blocking futures, we
+        // notify the context of all the recently
+        // spawned actors that they are ready.
         for to_notify in context.to_notify.drain(..) {
             to_notify.done();
         }
@@ -406,15 +437,19 @@ where
             Poll::Pending => (),
         }
 
-        // TODO
+        // We poll the inner runtime if there is one.
         if let Some(rt) = context.rt.take() {
             let mut wait = rt.wait();
 
+            // We poll until there is either...
             loop {
+                // ...no running actors or...
                 if wait.runtime().actors().is_empty() {
                     break;
                 }
 
+                // ...the runtime is waiting for them
+                // to yield.
                 if let Poll::Pending = Pin::new(&mut wait).poll_next(ctx) {
                     break;
                 }
@@ -423,7 +458,8 @@ where
             context.rt = Some(wait.into_runtime());
         }
 
-        // TODO
+        // We poll all the futures that the context
+        // was asked to handle.
         let mut to_remove = vec![];
         for (i, fut) in context.futs.iter_mut().enumerate() {
             match fut.as_mut().poll(ctx) {
@@ -438,15 +474,19 @@ where
             }
         }
 
+        // We remove the fully executed futures...
         for to_remove in to_remove {
             context.futs.remove(to_remove);
         }
 
+        // ...and return the output of the futures
+        // that returned one.
         if let Some(ret) = ret {
             return Poll::Ready(Some(ret));
         }
 
-        // TODO
+        // We poll all the streams that the context
+        // was asked to handle.
         let mut to_remove = vec![];
         for (i, stream) in context.streams.iter_mut().enumerate() {
             match stream.as_mut().poll_next(ctx) {
@@ -456,15 +496,18 @@ where
             }
         }
 
+        // We remove all the closed streams...
         for to_remove in to_remove {
             context.streams.remove(to_remove);
         }
 
+        // ...and return the yielded items.
         if let Some(ret) = ret {
             return Poll::Ready(Some(ret));
         }
 
-        // TODO
+        // We poll all the asynchronous readers that
+        // the context was asked to handle.
         let mut to_remove = vec![];
         for (i, read) in context.reads.iter_mut().enumerate() {
             match read.as_mut().poll_read(ctx) {
@@ -474,10 +517,13 @@ where
             }
         }
 
+        // We remove all the closed readers...
         for to_remove in to_remove {
             context.reads.remove(to_remove);
         }
 
+        // ...and transfer the data read to the
+        // actor.
         if let Some(ret) = ret {
             return Poll::Ready(Some(ret));
         }
@@ -489,5 +535,17 @@ where
 impl Default for ContextConfig {
     fn default() -> Self {
         ContextConfig { ready: None }
+    }
+}
+
+impl<A, R> Drop for Context<A, R>
+where
+    A: raw::Actor,
+    R: raw::Runtime,
+{
+    fn drop(&mut self) {
+        if let Some(rt) = &mut self.rt {
+            rt.stop();
+        }
     }
 }

@@ -43,7 +43,8 @@ pub trait TcpServer: Unpin + Send + Sized {
     /// Returns a stream of incoming connections.
     fn incoming(&mut self) -> Result<TcpServerIncoming<Self>, Self::Error>;
 
-    // TODO
+    /// Returns a stream of incoming connections,
+    /// consuming the server.
     fn into_incoming(self) -> Result<OwnedTcpServerIncoming<Self>, Self::Error>;
 }
 

@@ -24,29 +24,51 @@ use crate::message::Message;
 use crate::spawned::Spawned;
 use crate::update::Updater;
 
-// TODO
-pub struct Cancellable<C> {
-    // TODO
-    inner: CancellableInner<C>,
-}
+/// A wrapper around a future/stream/reader
+/// that is returned by a context after asking
+/// it to wait/subscribe/read, to allow to
+/// cancel the action.
+pub struct Cancellable<C>(CancellableInner<C>);
 
-// TODO
+/// The structure that is actually holding
+/// what [`Cancellable`] needs. It is also
+/// what contexts will have to store and
+/// update.
+///
+/// [`Cancellable`]: struct.Cancellable.html
 pub struct CancellableInner<C> {
-    // TODO
+    /// The future/stream/reader that
+    /// is holded.
     inner: Arc<AtomicCell<Option<Pin<Box<C>>>>>,
-    // TODO
+    /// Whether the action(s) are done or
+    /// what is holded can be released.
     done: Arc<AtomicBool>,
-    // TODO
+    /// A reference to the space that
+    /// was assigned to store the
+    /// [`Cancelling`]'s waker, to wake it
+    /// up when needed.
+    ///
+    /// [`Cancelling`]: struct.Cancelling.html
     waker: Arc<AtomicCell<Option<Waker>>>,
 }
 
-// TODO
+/// A future returned by [`Cancellable::cancel`]
+/// that resolves when what is handled has
+/// been cancelled (in which case it returns
+/// it) or the action(s) are done.
 pub struct Cancelling<C> {
-    // TODO
+    /// The future/stream/reader that is
+    /// holded.
     inner: Arc<AtomicCell<Option<Pin<Box<C>>>>>,
-    // TODO
+    /// Whether the action(s) are done or
+    /// what is holded can be released.
     done: Arc<AtomicBool>,
-    // TODO
+    /// A reference to the space that
+    /// was assigned to store the
+    /// [`Cancelling`]'s waker, to wake it
+    /// up when needed.
+    ///
+    /// [`Cancelling`]: struct.Cancelling.html
     waker: Arc<AtomicCell<Option<Waker>>>,
 }
 
@@ -57,10 +79,11 @@ pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send + Sized {
     type Sender: Sender<A>;
     type Updater: Updater<A>;
 
-    // TODO
+    /// Creates a new context with the provided
+    /// config and an identifier for the actor.
     fn new(actor_id: u64, config: Self::Config) -> Self;
 
-    // TODO
+    /// Returns the actor's identifier.
     fn actor_id(&self) -> u64;
 
     /// Emits an event that will be handled by the
@@ -108,16 +131,31 @@ pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send + Sized {
     /// update channel receiver.
     fn updater(&mut self) -> &mut Self::Updater;
 
-    // TODO
+    /// Returns a list of the context's inner
+    /// runtime's actors' identifier.
     fn actors(&self) -> Vec<u64>;
 
-    // TODO
+    /// Spawns a sub-actor on the context's inner
+    /// runtime.
+    ///
+    /// ## Note
+    ///
+    /// The new actor must have a context with the
+    /// same configuration structure as this context.
     fn spawn<S, C>(&mut self, actor: S) -> Option<Spawned<S>>
     where
         S: Actor<Context = C> + 'static,
         C: Context<S, Config = Self::Config>;
 
-    // TODO
+    /// Waits for a future to yield before mapping it
+    /// to a message and passing it to the actor.
+    ///
+    /// The execution can be cancelled using the
+    /// returned [`Cancellable`]. Cancelling the
+    /// execution, if it isn't done, will return
+    /// the original `fut`.
+    ///
+    /// [`Cancellable`]: struct.Cancellable.html
     fn wait<F, M, O, T>(&mut self, fut: Pin<Box<F>>, map: M) -> Cancellable<F>
     where
         F: Future<Output = O> + Unpin + Send + 'static,
@@ -126,7 +164,19 @@ pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send + Sized {
         O: Send + 'static,
         T: Send + 'static;
 
-    // TODO
+    /// Waits for a future to yield before mapping it
+    /// to a message and passing it to the actor.
+    ///
+    /// Until all the blocking futures/asynchronous writes
+    /// have yielded, no messages, events, streams, etc.
+    /// will be handled by the context.
+    ///
+    /// The execution can be cancelled using the
+    /// returned [`Cancellable`]. Cancelling the
+    /// execution, if it isn't done, will return
+    /// the original `fut`.
+    ///
+    /// [`Cancellable`]: struct.Cancellable.html
     fn blocking_wait<F, M, O, T>(&mut self, fut: Pin<Box<F>>, map: M) -> Cancellable<F>
     where
         F: Future<Output = O> + Unpin + Send + 'static,
@@ -135,7 +185,15 @@ pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send + Sized {
         O: Send + 'static,
         T: Send + 'static;
 
-    // TODO
+    /// Forwards the items yielded by a stream to
+    /// the actor after mapping them to a message.
+    ///
+    /// The execution can be cancelled using the
+    /// returned [`Cancellable`]. Cancelling the
+    /// execution, if it isn't done, will return
+    /// the original `fut`.
+    ///
+    /// [`Cancellable`]: struct.Cancellable.html
     fn subscribe<S, M, I, T>(&mut self, stream: Pin<Box<S>>, map: M) -> Cancellable<S>
     where
         S: Stream<Item = I> + Unpin + Send + 'static,
@@ -144,7 +202,16 @@ pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send + Sized {
         I: Send + 'static,
         T: Send + 'static;
 
-    // TODO
+    /// Forwards the received data to the actor
+    /// after either mapping it or a returned
+    /// error to a message.
+    ///
+    /// The execution can be cancelled using the
+    /// returned [`Cancellable`]. Cancelling the
+    /// execution, if it isn't done, will return
+    /// the original `fut`.
+    ///
+    /// [`Cancellable`]: struct.Cancellable.html
     fn read<R, M, N, T, E>(
         &mut self,
         read: Pin<Box<R>>,
@@ -160,7 +227,17 @@ pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send + Sized {
         T: Send + 'static,
         E: Send + 'static;
 
-    // TODO
+    /// Waits for data to be written over an asynchronous
+    /// writer, then passing a message returned by either
+    /// `map` or `map_err` (depending on whether an error
+    /// was returned by the writer) to the actor.
+    ///
+    /// The execution can be cancelled using the
+    /// returned [`Cancellable`]. Cancelling the
+    /// execution, if it isn't done, will return
+    /// the original `fut`.
+    ///
+    /// [`Cancellable`]: struct.Cancellable.html
     fn write<W, M, N, T, E>(
         &mut self,
         write: Pin<Box<W>>,
@@ -176,7 +253,21 @@ pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send + Sized {
         T: Send + 'static,
         E: Send + 'static;
 
-    // TODO
+    /// Waits for data to be written over an asynchronous
+    /// writer, then passing a message returned by either
+    /// `map` or `map_err` (depending on whether an error
+    /// was returned by the writer) to the actor.
+    ///
+    /// Until all the blocking futures/asynchronous writes
+    /// have yielded, no messages, events, streams, etc.
+    /// will be handled by the context.
+    ///
+    /// The execution can be cancelled using the
+    /// returned [`Cancellable`]. Cancelling the
+    /// execution, if it isn't done, will return
+    /// the original `fut`.
+    ///
+    /// [`Cancellable`]: struct.Cancellable.html
     fn blocking_write<W, M, N, T, E>(
         &mut self,
         write: Pin<Box<W>>,
@@ -212,54 +303,69 @@ pub enum Work<A: Actor> {
 }
 
 impl<C> Cancellable<C> {
-    // TODO
     pub fn new(inner: Pin<Box<C>>) -> (Self, CancellableInner<C>) {
         let inner = Arc::new(AtomicCell::new(Some(inner)));
         let done = Arc::new(AtomicBool::new(false));
         let waker = Arc::new(AtomicCell::new(None));
 
         (
-            Cancellable {
-                inner: CancellableInner {
+            Cancellable(
+                CancellableInner {
                     inner: inner.clone(),
                     done: done.clone(),
                     waker: waker.clone(),
                 },
-            },
+            ),
             CancellableInner { inner, done, waker },
         )
     }
 
-    // TODO
+    /// Creates a future that will yield when
+    /// the action(s) have either been cancelled,
+    /// in which case it will also give back what
+    /// was holded, or are done.
     pub fn cancel(self) -> Cancelling<C> {
         Cancelling {
-            inner: self.inner.inner,
-            done: self.inner.done,
-            waker: self.inner.waker,
+            inner: self.0.inner,
+            done: self.0.done,
+            waker: self.0.waker,
         }
     }
 }
 
 impl<C> CancellableInner<C> {
-    // TODO
+    /// Gets what the wrapper holds.
+    ///
+    /// ## Note
+    ///
+    /// If the action(s) aren't done, you need
+    /// to call [`set`].
+    ///
+    /// [`set`]: #method.set
     pub fn get(&self) -> Option<Pin<Box<C>>> {
         self.inner.swap(None)
     }
 
-    // TODO
+    /// Sets what the wrapper holds to `inner`.
     pub fn set(&self, inner: Pin<Box<C>>) {
         self.inner.store(Some(inner));
 
+        // We eventually wake up the future
+        // that wants to get what's holded back.
         if let Some(waker) = self.waker.swap(None) {
             waker.wake();
         }
     }
 
-    // TODO
+    /// Sets the action(s) as done.
     pub fn done(&self) {
         self.inner.store(None);
         self.done.store(true, Ordering::SeqCst);
 
+        // We eventually wake up the future
+        // that wanted to get what's holded back,
+        // so that it can know that it wont be
+        // able to.
         if let Some(waker) = self.waker.swap(None) {
             waker.wake();
         }

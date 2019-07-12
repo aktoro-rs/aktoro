@@ -8,8 +8,11 @@ use crate::net::NetworkManager;
 use crate::spawned::Spawned;
 
 pub trait Wait<R: Runtime>: Stream<Item = Result<u64, (u64, R::Error)>> + Unpin + Send {
+    /// Returns a reference to the runtime.
     fn runtime(&self) -> &R;
 
+    /// Returns the runtime, consuming the
+    /// stream.
     fn into_runtime(self) -> R;
 }
 
@@ -22,12 +25,16 @@ pub trait Runtime: Default + Unpin + Send {
     /// runtime implementation).
     type NetworkManager: NetworkManager;
 
-    // TODO
+    /// The type that is allowing the runtime to
+    /// be polled after calling [`wait`].
+    ///
+    /// [`wait`]: #method.wait
     type Wait: Wait<Self>;
 
     type Error: error::Error + Send + 'static;
 
-    // TODO
+    /// Returns a list of the runtime's actors'
+    /// identifier.
     fn actors(&self) -> Vec<u64>;
 
     /// Spawns a new actor on the runtime,
@@ -42,7 +49,15 @@ pub trait Runtime: Default + Unpin + Send {
     where
         A: Actor + 'static;
 
-    // TODO
+    /// Spawns a new actor on the runtime,
+    /// passing its context the provided config
+    /// and returning [`Some(Spawned<A>)`] if it
+    /// succeeded or [`None`] if it failed or
+    /// if the actor stopped itself when
+    /// [`Actor::starting`] was called.
+    ///
+    /// [`Some(Spawned<A>)`]: sturct.Spawned.html
+    /// [`Actor::starting`]: trait.Actor.html#method.starting
     fn spawn_with<A, C>(&mut self, actor: A, config: C::Config) -> Option<Spawned<A>>
     where
         A: Actor<Context = C> + 'static,
@@ -54,9 +69,15 @@ pub trait Runtime: Default + Unpin + Send {
     /// an UDP socket.
     fn net(&mut self) -> Self::NetworkManager;
 
-    // TODO
+    /// Returns a stream allowing to poll the
+    /// runtime's actors.
+    ///
+    /// ## Note
+    ///
+    /// The stream can be transformed back into
+    /// a runtime.
     fn wait(self) -> Self::Wait;
 
-    // TODO
+    /// Asks all the runtime's actors to stop.
     fn stop(&mut self);
 }

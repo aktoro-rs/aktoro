@@ -17,13 +17,19 @@ type Waker = Arc<AtomicCell<(bool, Option<task::Waker>)>>;
 /// messages over it, and receivers to
 /// retrieve them.
 pub(crate) struct Channel<T> {
-    // TODO
+    /// The queue that is holding the
+    /// messages that have not been
+    /// received yet.
     pub(crate) queue: Queue<Message<T>>,
-    // TODO
+    /// Whether the channel is closed.
     pub(crate) closed: AtomicBool,
-    // TODO
+    /// The counters used to store the
+    /// current number of senders,
+    /// receivers, messages and the
+    /// channel's limits.
     pub(crate) counters: Counters,
-    // TODO
+    /// A list of the wakers that can
+    /// be used to wake up receivers.
     pub(crate) wakers: SegQueue<Waker>,
 }
 
@@ -79,7 +85,7 @@ impl<T> Channel<T> {
         }
     }
 
-    // TODO
+    /// Registers a new waker.
     pub(crate) fn register(&self, waker: Waker) {
         self.wakers.push(waker);
     }

@@ -50,9 +50,17 @@ pub struct TcpIncoming<'i> {
     incoming: net::tcp::IncomingStream<'i>,
 }
 
-// TODO
+/// A stream that yields new TCP
+/// connections.
+///
+/// ## Note
+///
+/// It is similar to [`TcpIncoming`]
+/// but because it actually holds the
+/// tcp server it doesn't have lifetime
+/// issues.
 pub struct OwnedTcpIcoming {
-    // TODO
+    /// The tcp server.
     server: TcpServer,
 }
 

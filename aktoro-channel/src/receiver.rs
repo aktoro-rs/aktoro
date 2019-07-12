@@ -18,8 +18,13 @@ use crate::error::*;
 ///
 /// [`try_recv`]: #method.try_recv
 pub struct Receiver<T> {
-    waker: Arc<AtomicCell<(bool, Option<Waker>)>>,
+    /// The channel the receiver will
+    /// receive data from.
     channel: Option<Arc<Channel<T>>>,
+    /// A reference to the space the
+    /// receiver was assigned to store
+    /// its waker.
+    waker: Arc<AtomicCell<(bool, Option<Waker>)>>,
 }
 
 impl<T> Receiver<T> {

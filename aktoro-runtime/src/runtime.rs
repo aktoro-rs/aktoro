@@ -4,6 +4,7 @@ use std::task;
 use std::task::Poll;
 
 use aktoro_raw as raw;
+use aktoro_raw::Runtime as RawRuntime;
 use fnv::FnvHashMap;
 use futures_core::Stream;
 use rand::FromEntropy;
@@ -34,13 +35,19 @@ pub struct Runtime {
     /// A receiver the the actors' killed
     /// channel, notified when an actor
     /// has stopped/been killed.
+    ///
+    /// It is shared among all the runtime's
+    /// actors.
     recver: KilledRecver,
     /// A fast (non-cryptographic) random
     /// number generator.
     rng: Xoshiro512StarStar,
 }
 
-// TODO
+/// The stream returned by [`Runtime::wait`]
+/// that allows to poll its actors.
+///
+/// [`Runtime::wait`]: struct.Runtime.html#method.wait
 pub struct Wait(Runtime);
 
 impl Runtime {
@@ -104,12 +111,10 @@ impl raw::Runtime for Runtime {
         NetworkManager
     }
 
-    // TODO
     fn wait(self) -> Wait {
         Wait(self)
     }
 
-    // TODO
     fn stop(&mut self) {
         // Ask to every actor to stop.
         for (_, actor) in self.actors.iter_mut() {
@@ -141,15 +146,20 @@ impl Stream for Wait {
             return Poll::Ready(None);
         }
 
-        // TODO
+        // We poll all the runtime's actors until
+        // one yields.
         let mut remove = None;
         for (id, act) in rt.actors.iter_mut() {
             if let Poll::Ready(res) = Pin::new(&mut act.1).poll(ctx) {
                 remove = Some((*id, res));
+
+                break;
             }
         }
 
-        // TODO
+        // If an actor yielded, we remove it from
+        // the actors list and yield what's been
+        // yielded.
         if let Some((id, res)) = remove {
             let removed = rt.actors.remove(&id);
 
@@ -160,7 +170,9 @@ impl Stream for Wait {
             }
         }
 
-        // TODO
+        // We try to receive the identifier of the
+        // dead actors via the killed channel, to
+        // remove them and yield an update.
         match Pin::new(&mut rt.recver).poll_next(ctx) {
             Poll::Ready(Some(actor)) => {
                 rt.actors.remove(&actor);
@@ -185,5 +197,11 @@ impl Default for Runtime {
             recver,
             rng: Xoshiro512StarStar::from_entropy(),
         }
+    }
+}
+
+impl Drop for Runtime {
+    fn drop(&mut self) {
+        self.stop()
     }
 }
