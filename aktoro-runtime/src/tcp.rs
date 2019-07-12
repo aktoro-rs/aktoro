@@ -191,7 +191,10 @@ impl AsyncRead for TcpClient {
         ctx: &mut FutContext,
         buf: &mut [u8],
     ) -> Poll<Result<usize, FutError>> {
-        Pin::new(&mut self.get_mut().stream).poll_read(ctx, buf)
+        match Pin::new(&mut self.get_mut().stream).poll_read(ctx, buf) {
+            Poll::Ready(Ok(read)) if read == 0 => Poll::Pending,
+            polled => polled,
+        }
     }
 }
 
@@ -219,7 +222,10 @@ impl AsyncRead for TcpStream {
         ctx: &mut FutContext,
         buf: &mut [u8],
     ) -> Poll<Result<usize, FutError>> {
-        Pin::new(&mut self.get_mut().stream).poll_read(ctx, buf)
+        match Pin::new(&mut self.get_mut().stream).poll_read(ctx, buf) {
+            Poll::Ready(Ok(read)) if read == 0 => Poll::Pending,
+            polled => polled,
+        }
     }
 }
 

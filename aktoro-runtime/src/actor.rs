@@ -153,10 +153,8 @@ impl<A: raw::Actor> Actor<A> {
         //   if the `Spanwed` linked to
         //   this actor has been dropped,
         //   it will return an error.
-        if let Err(err) = self.ctx.update() {
-            return Err(Box::new(err).into());
-        }
-
+        // TODO: should we take care of the possible errors?
+        self.ctx.update().ok();
         Ok(())
     }
 }

@@ -5,6 +5,7 @@ use std::task::Context as FutContext;
 use std::task::Poll;
 
 use aktoro_channel::error::TrySendError;
+use aktoro_channel::Notify;
 use aktoro_raw as raw;
 use aktoro_raw::Updater as RawUpdater;
 use aktoro_raw::Wait as RawWait;
@@ -12,8 +13,6 @@ use futures_core::Stream;
 use futures_io as io;
 use futures_io::AsyncRead;
 use futures_io::AsyncWrite;
-use futures_util::FutureExt;
-use futures_util::StreamExt;
 
 use crate::channel;
 use crate::channel::Receiver;
@@ -31,12 +30,19 @@ use crate::update::Update;
 use crate::update::Updated;
 use crate::update::Updater;
 
+// TODO
+pub struct ContextConfig {
+    ready: Option<Notify>,
+}
+
 /// An actor context using the [`aktoro-channel`] crate.
 ///
 /// [`aktoro-channel`]: https://docs.rs/aktoro-channel
 pub struct Context<A: raw::Actor, R: raw::Runtime> {
     // TODO
-    pub actor_id: u64,
+    actor_id: u64,
+    // TODO
+    ready: Option<Notify>,
     /// The actor's current status.
     status: A::Status,
     /// An actor's control channel sender.
@@ -47,6 +53,8 @@ pub struct Context<A: raw::Actor, R: raw::Runtime> {
     /// and the runtime should be notified.
     update: bool,
     // TODO
+    b_futs: Vec<Pin<Box<dyn raw::AsyncMessageFut<Actor = A>>>>,
+    // TODO
     futs: Vec<Pin<Box<dyn raw::AsyncMessageFut<Actor = A>>>>,
     // TODO
     streams: Vec<Pin<Box<dyn raw::AsyncMessageStream<Actor = A>>>>,
@@ -54,6 +62,8 @@ pub struct Context<A: raw::Actor, R: raw::Runtime> {
     reads: Vec<Pin<Box<dyn raw::AsyncReadStream<Actor = A>>>>,
     // TODO
     rt: Option<R>,
+    // TODO
+    to_notify: Vec<Notify>,
     /// A list of the actor's unhandled events.
     events: VecDeque<Box<dyn raw::Event<Actor = A>>>,
     /// An actor's message channel sender.
@@ -71,11 +81,13 @@ where
     A: raw::Actor + 'static,
     RT: raw::Runtime,
 {
+    type Config = ContextConfig;
+
     type Controller = Controller<A>;
     type Sender = Sender<A>;
     type Updater = Updater<A>;
 
-    fn new(actor_id: u64) -> Context<A, RT> {
+    fn new(actor_id: u64, config: ContextConfig) -> Context<A, RT> {
         // We create the actor's control, message and
         // update channels.
         let (ctrler, ctrled) = control::new();
@@ -84,20 +96,27 @@ where
 
         Context {
             actor_id,
+            ready: config.ready,
             status: A::Status::default(),
             ctrler,
             ctrled,
             update: false,
-            futs: Vec::new(),
-            streams: Vec::new(),
-            reads: Vec::new(),
+            b_futs: vec![],
+            futs: vec![],
+            streams: vec![],
+            reads: vec![],
             rt: None,
+            to_notify: vec![],
             events: VecDeque::new(),
             sender,
             recver,
             updter,
             updted: Some(updted),
         }
+    }
+
+    fn actor_id(&self) -> u64 {
+        self.actor_id
     }
 
     fn emit<E>(&mut self, event: E)
@@ -161,9 +180,10 @@ where
         }
     }
 
-    fn spawn<S>(&mut self, actor: S) -> Option<raw::Spawned<S>>
+    fn spawn<S, C>(&mut self, actor: S) -> Option<raw::Spawned<S>>
     where
-        S: raw::Actor + 'static,
+        S: raw::Actor<Context = C> + 'static,
+        C: raw::Context<S, Config = ContextConfig>,
     {
         let rt = if let Some(rt) = &mut self.rt {
             rt
@@ -172,31 +192,65 @@ where
             self.rt.as_mut().unwrap()
         };
 
-        rt.spawn(actor)
+        let mut config = ContextConfig::default();
+
+        let (notify, ready) = Notify::new();
+        config.ready = Some(ready);
+
+        if let Some(spawned) = rt.spawn_with(actor, config) {
+            self.to_notify.push(notify);
+            Some(spawned)
+        } else {
+            None
+        }
     }
 
-    fn wait<F, M, O, T>(&mut self, fut: F, map: M)
+    fn wait<F, M, O, T>(&mut self, fut: Pin<Box<F>>, map: M) -> raw::Cancellable<F>
     where
         F: Future<Output = O> + Unpin + Send + 'static,
-        M: Fn(O) -> T + Send + 'static,
+        M: Fn(O) -> T + Unpin + Send + Sync + 'static,
         A: raw::Handler<T, Output = ()>,
+        O: Send + 'static,
         T: Send + 'static,
     {
-        self.futs.push(Box::pin(AsyncMessageFut::new(fut.map(map))));
+        let (cancellable, inner) = raw::Cancellable::new(fut);
+
+        self.futs.push(Box::pin(AsyncMessageFut::new(inner, map)));
+
+        cancellable
     }
 
-    fn subscribe<S, M, I, T>(&mut self, stream: S, map: M)
+    fn blocking_wait<F, M, O, T>(&mut self, fut: Pin<Box<F>>, map: M) -> raw::Cancellable<F>
+    where
+        F: Future<Output = O> + Unpin + Send + 'static,
+        M: Fn(O) -> T + Unpin + Send + Sync + 'static,
+        A: raw::Handler<T, Output = ()>,
+        O: Send + 'static,
+        T: Send + 'static,
+    {
+        let (cancellable, inner) = raw::Cancellable::new(fut);
+        self.b_futs.push(Box::pin(AsyncMessageFut::new(inner, map)));
+
+        cancellable
+    }
+
+    fn subscribe<S, M, I, T>(&mut self, stream: Pin<Box<S>>, map: M) -> raw::Cancellable<S>
     where
         S: Stream<Item = I> + Unpin + Send + 'static,
-        M: Fn(I) -> T + Send + 'static,
+        M: Fn(I) -> T + Unpin + Send + Sync + 'static,
         A: raw::Handler<T, Output = ()>,
+        I: Send + 'static,
         T: Send + 'static,
     {
+        let (cancellable, inner) = raw::Cancellable::new(stream);
+
         self.streams
-            .push(Box::pin(AsyncMessageStream::new(stream.map(map))));
+            .push(Box::pin(AsyncMessageStream::new(inner, map)));
+
+        cancellable
     }
 
-    fn read<R, M, N, T, E>(&mut self, read: R, cap: usize, map: M, map_err: N)
+    fn read<R, M, N, T, E>(&mut self, read: Pin<Box<R>>, cap: usize, map: M, map_err: N) -> raw::Cancellable<R>
     where
         R: AsyncRead + Unpin + Send + 'static,
         M: Fn(Vec<u8>) -> T + Unpin + Send + Sync + 'static,
@@ -205,21 +259,46 @@ where
         T: Send + 'static,
         E: Send + 'static,
     {
+        let (cancellable, inner) = raw::Cancellable::new(read);
+
         self.reads
-            .push(Box::pin(AsyncReadStream::new(read, cap, map, map_err)));
+            .push(Box::pin(AsyncReadStream::new(inner, cap, map, map_err)));
+
+        cancellable
     }
 
-    fn write<W, M, N, T, E>(&mut self, write: W, data: Vec<u8>, map: M, map_err: N)
+    fn write<W, M, N, T, E>(&mut self, write: Pin<Box<W>>, data: Vec<u8>, map: M, map_err: N) -> raw::Cancellable<W>
     where
         W: AsyncWrite + Unpin + Send + 'static,
-        M: Fn((Vec<u8>, usize), W) -> T + Unpin + Send + Sync + 'static,
+        M: Fn((Vec<u8>, usize), Pin<Box<W>>) -> T + Unpin + Send + Sync + 'static,
         N: Fn(io::Error) -> E + Unpin + Send + Sync + 'static,
         A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()>,
         T: Send + 'static,
         E: Send + 'static,
     {
+        let (cancellable, inner) = raw::Cancellable::new(write);
+
         self.futs
-            .push(Box::pin(AsyncWriteFut::new(write, data, map, map_err)));
+            .push(Box::pin(AsyncWriteFut::new(inner, data, map, map_err)));
+
+        cancellable
+    }
+
+    fn blocking_write<W, M, N, T, E>(&mut self, write: Pin<Box<W>>, data: Vec<u8>, map: M, map_err: N) -> raw::Cancellable<W>
+    where
+        W: AsyncWrite + Unpin + Send + 'static,
+        M: Fn((Vec<u8>, usize), Pin<Box<W>>) -> T + Unpin + Send + Sync + 'static,
+        N: Fn(io::Error) -> E + Unpin + Send + Sync + 'static,
+        A: raw::Handler<T, Output = ()> + raw::Handler<E, Output = ()>,
+        T: Send + 'static,
+        E: Send + 'static,
+    {
+        let (cancellable, inner) = raw::Cancellable::new(write);
+
+        self.b_futs
+            .push(Box::pin(AsyncWriteFut::new(inner, data, map, map_err)));
+
+        cancellable
     }
 }
 
@@ -232,6 +311,16 @@ where
 
     fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<raw::Work<A>>> {
         let context = self.get_mut();
+        let mut ret = None;
+
+        if let Some(ready) = context.ready.as_mut() {
+            match Pin::new(ready).poll(ctx) {
+                Poll::Ready(()) => {
+                    context.ready.take();
+                }
+                Poll::Pending => return Poll::Pending,
+            }
+        }
 
         // If an action has been received an action has
         // been received from the actor's control channel,
@@ -249,6 +338,36 @@ where
         if context.update {
             context.update = false;
             return Poll::Ready(Some(raw::Work::Update));
+        }
+
+        // TODO
+        let mut to_remove = vec![];
+        for (i, fut) in context.b_futs.iter_mut().enumerate() {
+            match fut.as_mut().poll(ctx) {
+                Poll::Ready(Some(msg)) => {
+                    to_remove.push(i);
+                    ret = Some(raw::Work::Message(msg));
+
+                    break;
+                }
+                Poll::Ready(None) => to_remove.push(i),
+                Poll::Pending => (),
+            }
+        }
+
+        for to_remove in to_remove {
+            context.b_futs.remove(to_remove);
+        }
+
+        if let Some(ret) = ret {
+            return Poll::Ready(Some(ret));
+        } else if !context.b_futs.is_empty() {
+            return Poll::Pending;
+        }
+
+        // TODO
+        for to_notify in context.to_notify.drain(..) {
+            to_notify.done();
         }
 
         // If the actor has unhandled events, we ask the
@@ -287,24 +406,33 @@ where
         }
 
         // TODO
+        let mut to_remove = vec![];
         for (i, fut) in context.futs.iter_mut().enumerate() {
             match fut.as_mut().poll(ctx) {
-                Poll::Ready(msg) => {
-                    context.futs.remove(i);
+                Poll::Ready(Some(msg)) => {
+                    to_remove.push(i);
+                    ret = Some(raw::Work::Message(msg));
 
-                    return Poll::Ready(Some(raw::Work::Message(msg)));
+                    break;
                 }
+                Poll::Ready(None) => to_remove.push(i),
                 Poll::Pending => (),
             }
+        }
+
+        for to_remove in to_remove {
+            context.futs.remove(to_remove);
+        }
+
+        if let Some(ret) = ret {
+            return Poll::Ready(Some(ret));
         }
 
         // TODO
         let mut to_remove = vec![];
         for (i, stream) in context.streams.iter_mut().enumerate() {
             match stream.as_mut().poll_next(ctx) {
-                Poll::Ready(Some(msg)) => {
-                    return Poll::Ready(Some(raw::Work::Message(msg)));
-                }
+                Poll::Ready(Some(msg)) => ret = Some(raw::Work::Message(msg)),
                 Poll::Ready(None) => to_remove.push(i),
                 Poll::Pending => (),
             }
@@ -314,13 +442,36 @@ where
             context.streams.remove(to_remove);
         }
 
+        if let Some(ret) = ret {
+            return Poll::Ready(Some(ret));
+        }
+
         // TODO
-        for read in context.reads.iter_mut() {
-            if let Poll::Ready(msg) = read.as_mut().poll_read(ctx) {
-                return Poll::Ready(Some(raw::Work::Message(msg)));
+        let mut to_remove = vec![];
+        for (i, read) in context.reads.iter_mut().enumerate() {
+            match read.as_mut().poll_read(ctx) {
+                Poll::Ready(Some(msg)) => ret = Some(raw::Work::Message(msg)),
+                Poll::Ready(None) => to_remove.push(i),
+                Poll::Pending => (),
             }
         }
 
+        for to_remove in to_remove {
+            context.reads.remove(to_remove);
+        }
+
+        if let Some(ret) = ret {
+            return Poll::Ready(Some(ret));
+        }
+
         Poll::Pending
+    }
+}
+
+impl Default for ContextConfig {
+    fn default() -> Self {
+        ContextConfig {
+            ready: None,
+        }
     }
 }

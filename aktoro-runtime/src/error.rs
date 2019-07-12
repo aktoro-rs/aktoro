@@ -10,9 +10,6 @@ pub struct Error {
 
 #[derive(Debug)]
 pub enum ErrorKind {
-    /// The actor has already been removed from
-    /// the runtime's actors list.
-    AlreadyRemoved(u64),
     /// Returns a `Box` contaning any error type
     /// that implements the [`Error`] trait.
     ///
@@ -23,13 +20,6 @@ pub enum ErrorKind {
 }
 
 impl Error {
-    /// Creates a new "already removed" error.
-    pub(crate) fn already_removed(id: u64) -> Self {
-        Error {
-            kind: ErrorKind::AlreadyRemoved(id),
-        }
-    }
-
     /// Creates a new boxed error.
     pub(crate) fn std<S>(err: S) -> Self
     where
@@ -88,17 +78,6 @@ impl Error {
         }
     }
 
-    /// Whether the error occured because the actor
-    /// was already removed from the runtime's actors
-    /// list.
-    pub fn is_already_removed(&self) -> bool {
-        if let ErrorKind::AlreadyRemoved(_) = self.kind {
-            true
-        } else {
-            false
-        }
-    }
-
     /// Whether multiple errors occured.
     pub fn is_multiple(&self) -> bool {
         if let ErrorKind::Multiple(_) = self.kind {
@@ -125,9 +104,6 @@ impl StdError for Error {}
 impl Display for Error {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         match &self.kind {
-            ErrorKind::AlreadyRemoved(id) => {
-                write!(fmt, "actor ({}) already removed from list", id,)
-            }
             ErrorKind::Std(err) => write!(fmt, "{}", err),
             ErrorKind::Multiple(_) => write!(fmt, "multiple errors",),
         }

@@ -4,7 +4,6 @@ use std::task::Context as FutContext;
 use std::task::Poll;
 
 use aktoro_raw as raw;
-use aktoro_raw::Context as RawContext;
 use fnv::FnvHashMap;
 use futures_core::Stream;
 use rand::FromEntropy;
@@ -66,11 +65,19 @@ impl raw::Runtime for Runtime {
     where
         A: raw::Actor + 'static,
     {
+        self.spawn_with(actor, Default::default())
+    }
+
+    fn spawn_with<A, C>(&mut self, actor: A, config: C::Config) -> Option<raw::Spawned<A>>
+    where
+        A: raw::Actor<Context = C> + 'static,
+        C: raw::Context<A>,
+    {
         // Generate the actor's ID.
         let id = self.rng.next_u64();
 
         // Create a new context for the actor.
-        let mut ctx = A::Context::new(id);
+        let mut ctx = C::new(id, config);
 
         // Create a new `Spawned` struct from
         // the actor's context.
@@ -151,7 +158,7 @@ impl Stream for Wait {
                 (None, Err(err)) => {
                     return Poll::Ready(Some(Err((
                         id,
-                        Error::multiple(vec![Error::already_removed(id), Error::std(err)]),
+                        Error::std(err),
                     ))))
                 }
                 _ => return Poll::Ready(Some(Ok(id))),
@@ -161,11 +168,9 @@ impl Stream for Wait {
         // TODO
         match Pin::new(&mut rt.recver).poll_next(ctx) {
             Poll::Ready(Some(actor)) => {
-                if rt.actors.remove(&actor).is_none() {
-                    return Poll::Ready(Some(Err((actor, Error::already_removed(actor)))));
-                } else {
-                    return Poll::Ready(Some(Ok(actor)));
-                }
+                rt.actors.remove(&actor);
+
+                return Poll::Ready(Some(Ok(actor)));
             }
             Poll::Ready(None) => return Poll::Ready(None),
             Poll::Pending => (),
