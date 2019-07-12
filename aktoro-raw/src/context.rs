@@ -1,5 +1,13 @@
 use std::future::Future;
+use std::pin::Pin;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::task::Context as FutContext;
+use std::task::Poll;
+use std::task::Waker;
 
+use crossbeam_utils::atomic::AtomicCell;
 use futures_core::Stream;
 use futures_io as io;
 use futures_io::AsyncRead;
@@ -16,13 +24,44 @@ use crate::message::Message;
 use crate::spawned::Spawned;
 use crate::update::Updater;
 
-pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send {
+// TODO
+pub struct Cancellable<C> {
+    // TODO
+    inner: CancellableInner<C>,
+}
+
+// TODO
+pub struct CancellableInner<C> {
+    // TODO
+    inner: Arc<AtomicCell<Option<Pin<Box<C>>>>>,
+    // TODO
+    done: Arc<AtomicBool>,
+    // TODO
+    waker: Arc<AtomicCell<Option<Waker>>>,
+}
+
+// TODO
+pub struct Cancelling<C> {
+    // TODO
+    inner: Arc<AtomicCell<Option<Pin<Box<C>>>>>,
+    // TODO
+    done: Arc<AtomicBool>,
+    // TODO
+    waker: Arc<AtomicCell<Option<Waker>>>,
+}
+
+pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send + Sized {
+    type Config: Default;
+
     type Controller: Controller<A>;
     type Sender: Sender<A>;
     type Updater: Updater<A>;
 
     // TODO
-    fn new(actor_id: u64) -> Self;
+    fn new(actor_id: u64, config: Self::Config) -> Self;
+
+    // TODO
+    fn actor_id(&self) -> u64;
 
     /// Emits an event that will be handled by the
     /// actor.
@@ -73,28 +112,40 @@ pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send {
     fn actors(&self) -> Vec<u64>;
 
     // TODO
-    fn spawn<S>(&mut self, actor: S) -> Option<Spawned<S>>
+    fn spawn<S, C>(&mut self, actor: S) -> Option<Spawned<S>>
     where
-        S: Actor + 'static;
+        S: Actor<Context = C> + 'static,
+        C: Context<S, Config = Self::Config>;
 
     // TODO
-    fn wait<F, M, O, T>(&mut self, fut: F, map: M)
+    fn wait<F, M, O, T>(&mut self, fut: Pin<Box<F>>, map: M) -> Cancellable<F>
     where
         F: Future<Output = O> + Unpin + Send + 'static,
-        M: Fn(O) -> T + Send + 'static,
+        M: Fn(O) -> T + Unpin + Send + Sync + 'static,
         A: Handler<T, Output = ()>,
+        O: Send + 'static,
         T: Send + 'static;
 
     // TODO
-    fn subscribe<S, M, I, T>(&mut self, stream: S, map: M)
+    fn blocking_wait<F, M, O, T>(&mut self, fut: Pin<Box<F>>, map: M) -> Cancellable<F>
+    where
+        F: Future<Output = O> + Unpin + Send + 'static,
+        M: Fn(O) -> T + Unpin + Send + Sync + 'static,
+        A: Handler<T, Output = ()>,
+        O: Send + 'static,
+        T: Send + 'static;
+
+    // TODO
+    fn subscribe<S, M, I, T>(&mut self, stream: Pin<Box<S>>, map: M) -> Cancellable<S>
     where
         S: Stream<Item = I> + Unpin + Send + 'static,
-        M: Fn(I) -> T + Send + 'static,
+        M: Fn(I) -> T + Unpin + Send + Sync + 'static,
         A: Handler<T, Output = ()>,
+        I: Send + 'static,
         T: Send + 'static;
 
     // TODO
-    fn read<R, M, N, T, E>(&mut self, read: R, cap: usize, map: M, map_err: N)
+    fn read<R, M, N, T, E>(&mut self, read: Pin<Box<R>>, cap: usize, map: M, map_err: N) -> Cancellable<R>
     where
         R: AsyncRead + Unpin + Send + 'static,
         M: Fn(Vec<u8>) -> T + Unpin + Send + Sync + 'static,
@@ -104,10 +155,20 @@ pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send {
         E: Send + 'static;
 
     // TODO
-    fn write<W, M, N, T, E>(&mut self, write: W, data: Vec<u8>, map: M, map_err: N)
+    fn write<W, M, N, T, E>(&mut self, write: Pin<Box<W>>, data: Vec<u8>, map: M, map_err: N) -> Cancellable<W>
     where
         W: AsyncWrite + Unpin + Send + 'static,
-        M: Fn((Vec<u8>, usize), W) -> T + Unpin + Send + Sync + 'static,
+        M: Fn((Vec<u8>, usize), Pin<Box<W>>) -> T + Unpin + Send + Sync + 'static,
+        N: Fn(io::Error) -> E + Unpin + Send + Sync + 'static,
+        A: Handler<T, Output = ()> + Handler<E, Output = ()>,
+        T: Send + 'static,
+        E: Send + 'static;
+
+    // TODO
+    fn blocking_write<W, M, N, T, E>(&mut self, write: Pin<Box<W>>, data: Vec<u8>, map: M, map_err: N) -> Cancellable<W>
+    where
+        W: AsyncWrite + Unpin + Send + 'static,
+        M: Fn((Vec<u8>, usize), Pin<Box<W>>) -> T + Unpin + Send + Sync + 'static,
         N: Fn(io::Error) -> E + Unpin + Send + Sync + 'static,
         A: Handler<T, Output = ()> + Handler<E, Output = ()>,
         T: Send + 'static,
@@ -130,4 +191,82 @@ pub enum Work<A: Actor> {
     /// Indicates that the actor's status has
     /// changed.
     Update,
+}
+
+impl<C> Cancellable<C> {
+    // TODO
+    pub fn new(inner: Pin<Box<C>>) -> (Self, CancellableInner<C>) {
+        let inner = Arc::new(AtomicCell::new(Some(inner)));
+        let done = Arc::new(AtomicBool::new(false));
+        let waker = Arc::new(AtomicCell::new(None));
+
+        (
+            Cancellable {
+                inner: CancellableInner {
+                    inner: inner.clone(),
+                    done: done.clone(),
+                    waker: waker.clone(),
+                }
+            },
+            CancellableInner { inner, done, waker, },
+        )
+    }
+
+    // TODO
+    pub fn cancel(self) -> Cancelling<C> {
+        Cancelling {
+            inner: self.inner.inner,
+            done: self.inner.done,
+            waker: self.inner.waker,
+        }
+    }
+}
+
+impl<C> CancellableInner<C> {
+    // TODO
+    pub fn get(&self) -> Option<Pin<Box<C>>> {
+        self.inner.swap(None)
+    }
+
+    // TODO
+    pub fn set(&self, inner: Pin<Box<C>>) {
+        self.inner.store(Some(inner));
+
+        if let Some(waker) = self.waker.swap(None) {
+            waker.wake();
+        }
+    }
+
+    // TODO
+    pub fn done(&self) {
+        self.inner.store(None);
+        self.done.store(true, Ordering::SeqCst);
+
+        if let Some(waker) = self.waker.swap(None) {
+            waker.wake();
+        }
+    }
+}
+
+impl<C> Future for Cancelling<C> {
+    type Output = Option<Pin<Box<C>>>;
+
+    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<Pin<Box<C>>>> {
+        if self.done.load(Ordering::SeqCst) {
+            return Poll::Ready(None);
+        }
+
+        match self.inner.swap(None) {
+            Some(inner) => {
+                self.waker.store(None);
+
+                Poll::Ready(Some(inner))
+            }
+            None => {
+                self.waker.store(Some(ctx.waker().clone()));
+
+                Poll::Pending
+            }
+        }
+    }
 }

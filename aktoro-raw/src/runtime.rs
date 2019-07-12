@@ -3,6 +3,7 @@ use std::error::Error as StdError;
 use futures_core::Stream;
 
 use crate::actor::Actor;
+use crate::context::Context;
 use crate::net::NetworkManager;
 use crate::spawned::Spawned;
 
@@ -40,6 +41,12 @@ pub trait Runtime: Default + Unpin + Send {
     fn spawn<A>(&mut self, actor: A) -> Option<Spawned<A>>
     where
         A: Actor + 'static;
+
+    // TODO
+    fn spawn_with<A, C>(&mut self, actor: A, config: C::Config) -> Option<Spawned<A>>
+    where
+        A: Actor<Context = C> + 'static,
+        C: Context<A>;
 
     /// Creates a new network manager, that
     /// can then be used by an actor to

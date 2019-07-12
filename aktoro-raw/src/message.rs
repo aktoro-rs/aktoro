@@ -4,9 +4,7 @@ use std::task::Poll;
 
 use crate::actor::Actor;
 
-pub type AsyncMessageOutput<A> = Box<dyn Message<Actor = A>>;
-
-pub type AsyncMessageItem<A> = Option<Box<dyn Message<Actor = A>>>;
+pub type AsyncMessageRet<A> = Option<Box<dyn Message<Actor = A>>>;
 
 pub trait Message: Send {
     type Actor: Actor;
@@ -21,14 +19,14 @@ pub trait Message: Send {
 pub trait AsyncMessageFut: Send {
     type Actor: Actor;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<AsyncMessageOutput<Self::Actor>>;
+    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<AsyncMessageRet<Self::Actor>>;
 }
 
 pub trait AsyncMessageStream: Send {
     type Actor: Actor;
 
     fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext)
-        -> Poll<AsyncMessageItem<Self::Actor>>;
+        -> Poll<AsyncMessageRet<Self::Actor>>;
 }
 
 pub trait AsyncReadStream: Send {
@@ -37,7 +35,7 @@ pub trait AsyncReadStream: Send {
     fn poll_read(
         self: Pin<&mut Self>,
         ctx: &mut FutContext,
-    ) -> Poll<AsyncMessageOutput<Self::Actor>>;
+    ) -> Poll<AsyncMessageRet<Self::Actor>>;
 }
 
 pub trait Handler<M: Send>: Actor {
