@@ -309,13 +309,11 @@ impl<C> Cancellable<C> {
         let waker = Arc::new(AtomicCell::new(None));
 
         (
-            Cancellable(
-                CancellableInner {
-                    inner: inner.clone(),
-                    done: done.clone(),
-                    waker: waker.clone(),
-                },
-            ),
+            Cancellable(CancellableInner {
+                inner: inner.clone(),
+                done: done.clone(),
+                waker: waker.clone(),
+            }),
             CancellableInner { inner, done, waker },
         )
     }
