@@ -15,10 +15,14 @@ use crate::queue::Queue;
 /// messages over it, and receivers to
 /// retrieve them.
 pub(crate) struct Channel<T> {
+    // TODO
     pub(crate) queue: Queue<Message<T>>,
+    // TODO
     pub(crate) closed: AtomicBool,
+    // TODO
     pub(crate) counters: Counters,
-    pub(crate) wakers: SegQueue<Arc<AtomicCell<Option<Waker>>>>,
+    // TODO
+    pub(crate) wakers: SegQueue<Arc<AtomicCell<(bool, Option<Waker>)>>>,
 }
 
 impl<T> Channel<T> {
@@ -73,10 +77,8 @@ impl<T> Channel<T> {
         }
     }
 
-    /// Registers a new waker to be
-    /// notified when a new message is
-    /// available.
-    pub(crate) fn register(&self, waker: Arc<AtomicCell<Option<Waker>>>) {
+    // TODO
+    pub(crate) fn register(&self, waker: Arc<AtomicCell<(bool, Option<Waker>)>>) {
         self.wakers.push(waker);
     }
 
@@ -84,12 +86,16 @@ impl<T> Channel<T> {
     /// available.
     fn notify(&self) {
         if let Ok(waker) = self.wakers.pop() {
-            if let Some(waker_) = waker.swap(None) {
-                waker_.wake();
-
-                self.wakers.push(waker);
-            } else {
-                self.notify();
+            match waker.swap((true, None)) {
+                (true, Some(waker_)) => {
+                    self.wakers.push(waker);
+                    waker_.wake();
+                }
+                (true, None) => {
+                    self.wakers.push(waker);
+                    self.notify();
+                }
+                _ => self.notify(),
             }
         }
     }

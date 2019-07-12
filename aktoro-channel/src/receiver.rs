@@ -18,7 +18,7 @@ use crate::error::*;
 ///
 /// [`try_recv`]: #method.try_recv
 pub struct Receiver<T> {
-    waker: Arc<AtomicCell<Option<Waker>>>,
+    waker: Arc<AtomicCell<(bool, Option<Waker>)>>,
     channel: Option<Arc<Channel<T>>>,
 }
 
@@ -32,7 +32,7 @@ impl<T> Receiver<T> {
         // creation.
         channel.counters.add_recver().expect("receivers limit == 0");
 
-        let waker = Arc::new(AtomicCell::new(None));
+        let waker = Arc::new(AtomicCell::new((true, None)));
         channel.register(waker.clone());
 
         Receiver {
@@ -68,7 +68,7 @@ impl<T> Receiver<T> {
     /// Closes the channel the receiver
     /// is connected to.
     pub fn close_channel(&self) {
-        self.waker.store(None);
+        self.waker.store((false, None));
 
         if let Some(channel) = &self.channel {
             channel.close()
@@ -78,7 +78,7 @@ impl<T> Receiver<T> {
     /// Disconnects the receiver from the
     /// channel.
     pub fn disconnect(&mut self) {
-        self.waker.store(None);
+        self.waker.store((false, None));
 
         let channel = if let Some(channel) = self.channel.take() {
             channel
@@ -97,7 +97,7 @@ impl<T> Receiver<T> {
     pub fn try_clone(&self) -> Result<Self, CloneError> {
         if let Some(channel) = &self.channel {
             if channel.counters.add_recver().is_ok() {
-                let waker = Arc::new(AtomicCell::new(None));
+                let waker = Arc::new(AtomicCell::new((true, None)));
 
                 Ok(Receiver {
                     waker,
@@ -116,7 +116,7 @@ impl<T> Stream for Receiver<T> {
     type Item = T;
 
     fn poll_next(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Option<T>> {
-        self.waker.store(None);
+        self.waker.store((true, None));
 
         if let Some(channel) = &self.channel {
             // We try to receive a message...
@@ -127,7 +127,7 @@ impl<T> Stream for Receiver<T> {
                 // ...or register the stream's
                 // waker if none is available...
                 Ok(None) => {
-                    self.waker.store(Some(ctx.waker().clone()));
+                    self.waker.store((true, Some(ctx.waker().clone())));
 
                     Poll::Pending
                 }
