@@ -1,5 +1,5 @@
 use std::pin::Pin;
-use std::task::Context as FutContext;
+use std::task;
 use std::task::Poll;
 
 use crate::actor::Actor;
@@ -19,19 +19,25 @@ pub trait Message: Send {
 pub trait AsyncMessageFut: Send {
     type Actor: Actor;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<AsyncMessageRet<Self::Actor>>;
+    fn poll(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<AsyncMessageRet<Self::Actor>>;
 }
 
 pub trait AsyncMessageStream: Send {
     type Actor: Actor;
 
-    fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<AsyncMessageRet<Self::Actor>>;
+    fn poll_next(
+        self: Pin<&mut Self>,
+        ctx: &mut task::Context,
+    ) -> Poll<AsyncMessageRet<Self::Actor>>;
 }
 
 pub trait AsyncReadStream: Send {
     type Actor: Actor;
 
-    fn poll_read(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<AsyncMessageRet<Self::Actor>>;
+    fn poll_read(
+        self: Pin<&mut Self>,
+        ctx: &mut task::Context,
+    ) -> Poll<AsyncMessageRet<Self::Actor>>;
 }
 
 pub trait Handler<M: Send>: Actor {

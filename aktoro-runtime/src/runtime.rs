@@ -1,6 +1,6 @@
 use std::future::Future;
 use std::pin::Pin;
-use std::task::Context as FutContext;
+use std::task;
 use std::task::Poll;
 
 use aktoro_raw as raw;
@@ -133,7 +133,7 @@ impl Stream for Wait {
 
     fn poll_next(
         self: Pin<&mut Self>,
-        ctx: &mut FutContext,
+        ctx: &mut task::Context,
     ) -> Poll<Option<Result<u64, (u64, Error)>>> {
         let rt = &mut self.get_mut().0;
 

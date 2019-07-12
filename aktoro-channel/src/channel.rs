@@ -1,7 +1,7 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::task::Waker;
+use std::task;
 
 use crossbeam_queue::SegQueue;
 use crossbeam_utils::atomic::AtomicCell;
@@ -10,6 +10,8 @@ use crate::counters::Counters;
 use crate::error::*;
 use crate::message::Message;
 use crate::queue::Queue;
+
+type Waker = Arc<AtomicCell<(bool, Option<task::Waker>)>>;
 
 /// A channel allowing senders to pass
 /// messages over it, and receivers to
@@ -22,7 +24,7 @@ pub(crate) struct Channel<T> {
     // TODO
     pub(crate) counters: Counters,
     // TODO
-    pub(crate) wakers: SegQueue<Arc<AtomicCell<(bool, Option<Waker>)>>>,
+    pub(crate) wakers: SegQueue<Waker>,
 }
 
 impl<T> Channel<T> {
@@ -78,7 +80,7 @@ impl<T> Channel<T> {
     }
 
     // TODO
-    pub(crate) fn register(&self, waker: Arc<AtomicCell<(bool, Option<Waker>)>>) {
+    pub(crate) fn register(&self, waker: Waker) {
         self.wakers.push(waker);
     }
 

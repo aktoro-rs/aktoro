@@ -3,7 +3,7 @@ use std::pin::Pin;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::task::Context as FutContext;
+use std::task;
 use std::task::Poll;
 use std::task::Waker;
 
@@ -269,7 +269,7 @@ impl<C> CancellableInner<C> {
 impl<C> Future for Cancelling<C> {
     type Output = Option<Pin<Box<C>>>;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<Pin<Box<C>>>> {
+    fn poll(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Option<Pin<Box<C>>>> {
         if self.done.load(Ordering::SeqCst) {
             return Poll::Ready(None);
         }

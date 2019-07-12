@@ -1,4 +1,4 @@
-use std::error::Error as StdError;
+use std::error;
 
 use futures_core::Stream;
 
@@ -16,7 +16,7 @@ pub trait Updater<A: Actor>: Unpin + Send {
 
     type Updated: Updated<Self::Update>;
 
-    type Error: StdError + Send + 'static;
+    type Error: error::Error + Send + 'static;
 
     // TODO
     fn try_send(&mut self, update: Self::Update) -> Result<(), Self::Error>;

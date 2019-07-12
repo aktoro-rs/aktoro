@@ -2,7 +2,7 @@ use std::future::Future;
 use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 use std::pin::Pin;
-use std::task::Context as FutContext;
+use std::task;
 use std::task::Poll;
 
 use aktoro_raw as raw;
@@ -80,7 +80,7 @@ impl raw::UdpSocket for UdpSocket {
 impl<'s, 'b> Future for SendTo<'s, 'b> {
     type Output = Result<usize, Error>;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Self::Output> {
         match Pin::new(&mut self.get_mut().send_to).poll(ctx) {
             Poll::Ready(Ok(sent)) => Poll::Ready(Ok(sent)),
             Poll::Ready(Err(err)) => Poll::Ready(Err(Box::new(err).into())),
@@ -92,7 +92,7 @@ impl<'s, 'b> Future for SendTo<'s, 'b> {
 impl<'s, 'b> Future for Recv<'s, 'b> {
     type Output = Result<(usize, SocketAddr), Error>;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Self::Output> {
         match Pin::new(&mut self.get_mut().recv_from).poll(ctx) {
             Poll::Ready(Ok(recved)) => Poll::Ready(Ok(recved)),
             Poll::Ready(Err(err)) => Poll::Ready(Err(Box::new(err).into())),

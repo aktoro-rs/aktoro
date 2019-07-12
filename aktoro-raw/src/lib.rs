@@ -25,5 +25,3 @@ pub use crate::spawned::*;
 pub use crate::tcp::*;
 pub use crate::udp::*;
 pub use crate::update::*;
-
-pub use futures_core::future::BoxFuture;

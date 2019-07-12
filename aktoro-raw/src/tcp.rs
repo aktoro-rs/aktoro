@@ -1,4 +1,4 @@
-use std::error::Error as StdError;
+use std::error;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
@@ -20,7 +20,7 @@ pub type OwnedTcpServerIncoming<S> = Box<
 pub trait TcpClient: TcpStream + Unpin + Send + Sized {
     type Connect: Future<Output = Result<Self, <Self as TcpClient>::Error>> + Unpin + Send;
 
-    type Error: StdError + Send + 'static;
+    type Error: error::Error + Send + 'static;
 
     /// Tries to connect to a TCP server at the
     /// given address.
@@ -30,7 +30,7 @@ pub trait TcpClient: TcpStream + Unpin + Send + Sized {
 pub trait TcpServer: Unpin + Send + Sized {
     type Stream: TcpStream;
 
-    type Error: StdError + Send + 'static;
+    type Error: error::Error + Send + 'static;
 
     /// Tries to create a new TCP server that
     /// will be bound to the given address.
@@ -48,7 +48,7 @@ pub trait TcpServer: Unpin + Send + Sized {
 }
 
 pub trait TcpStream: AsyncRead + AsyncWrite + Unpin + Send {
-    type Error: StdError + Send + 'static;
+    type Error: error::Error + Send + 'static;
 
     /// Returns the address that the server
     /// is bound to.

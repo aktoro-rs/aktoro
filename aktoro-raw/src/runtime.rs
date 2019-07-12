@@ -1,4 +1,4 @@
-use std::error::Error as StdError;
+use std::error;
 
 use futures_core::Stream;
 
@@ -25,7 +25,7 @@ pub trait Runtime: Default + Unpin + Send {
     // TODO
     type Wait: Wait<Self>;
 
-    type Error: StdError + Send + 'static;
+    type Error: error::Error + Send + 'static;
 
     // TODO
     fn actors(&self) -> Vec<u64>;

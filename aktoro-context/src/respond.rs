@@ -1,7 +1,7 @@
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::task::Context as FutContext;
+use std::task;
 use std::task::Poll;
 use std::task::Waker;
 
@@ -53,7 +53,7 @@ impl<O> Respond<O> {
 impl<O> Future for Respond<O> {
     type Output = O;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<O> {
+    fn poll(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<O> {
         // If the output is available, we
         // complete the future with it.
         if let Some(out) = self.0.out.swap(None) {

@@ -1,5 +1,5 @@
 use std::pin::Pin;
-use std::task::Context as FutContext;
+use std::task;
 use std::task::Poll;
 
 use aktoro_channel as channel;
@@ -67,7 +67,7 @@ where
 {
     type Item = Box<dyn raw::Message<Actor = A>>;
 
-    fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Option<Self::Item>> {
         Pin::new(&mut self.get_mut().0).poll_next(ctx)
     }
 }

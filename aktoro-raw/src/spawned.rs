@@ -1,5 +1,5 @@
 use std::pin::Pin;
-use std::task::Context as FutContext;
+use std::task;
 use std::task::Poll;
 
 use futures_core::Stream;
@@ -103,7 +103,7 @@ impl<A: Actor> Unpin for Spawned<A> {}
 impl<A: Actor> Stream for Spawned<A> {
     type Item = Update<A>;
 
-    fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<Update<A>>> {
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Option<Update<A>>> {
         if let Some(updted) = &mut self.get_mut().updted {
             Pin::new(updted).poll_next(ctx)
         } else {

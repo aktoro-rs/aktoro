@@ -1,4 +1,4 @@
-use std::error::Error as StdError;
+use std::error;
 
 use crate::context::Context;
 
@@ -7,7 +7,7 @@ pub trait Actor: Unpin + Send + Sized {
 
     type Status: Status + Unpin;
 
-    type Error: StdError + Send + 'static;
+    type Error: error::Error + Send + 'static;
 
     #[allow(unused)]
     /// Called when the actor's context has been created

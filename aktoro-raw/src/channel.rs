@@ -1,4 +1,4 @@
-use std::error::Error as StdError;
+use std::error;
 
 use futures_core::future::BoxFuture;
 use futures_core::Stream;
@@ -19,7 +19,7 @@ pub type SenderRes<'s, O, E> = Result<BoxFuture<'s, Result<O, E>>, E>;
 pub trait Sender<A: Actor>: Unpin + Clone + Send {
     type Receiver: Receiver<A>;
 
-    type Error: StdError + Send + 'static;
+    type Error: error::Error + Send + 'static;
 
     /// Tries to send a message to be handled by the
     /// actor.

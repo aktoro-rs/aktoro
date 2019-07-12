@@ -1,4 +1,4 @@
-use std::error::Error as StdError;
+use std::error;
 use std::fmt;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -14,7 +14,7 @@ pub enum ErrorKind {
     /// that implements the [`Error`] trait.
     ///
     /// [`Error`]: https://doc.rust-lang.org/std/error/trait.Error.html
-    Std(Box<dyn StdError + Send>),
+    Std(Box<dyn error::Error + Send>),
     /// Multiple errors occured.
     Multiple(Vec<Error>),
 }
@@ -23,7 +23,7 @@ impl Error {
     /// Creates a new boxed error.
     pub(crate) fn std<S>(err: S) -> Self
     where
-        S: StdError + Send + 'static,
+        S: error::Error + Send + 'static,
     {
         Error {
             kind: ErrorKind::Std(Box::new(err)),
@@ -99,7 +99,7 @@ impl Error {
     }
 }
 
-impl StdError for Error {}
+impl error::Error for Error {}
 
 impl Display for Error {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
@@ -118,7 +118,7 @@ impl From<ErrorKind> for Error {
 
 impl<S> From<Box<S>> for Error
 where
-    S: StdError + Send + 'static,
+    S: error::Error + Send + 'static,
 {
     fn from(err: Box<S>) -> Error {
         Error {

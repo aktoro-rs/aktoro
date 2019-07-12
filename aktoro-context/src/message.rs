@@ -1,7 +1,7 @@
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
-use std::task::Context as FutContext;
+use std::task;
 use std::task::Poll;
 
 use aktoro_raw as raw;
@@ -243,7 +243,10 @@ where
 {
     type Actor = A;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<raw::AsyncMessageRet<Self::Actor>> {
+    fn poll(
+        self: Pin<&mut Self>,
+        ctx: &mut task::Context,
+    ) -> Poll<raw::AsyncMessageRet<Self::Actor>> {
         let fut = self.get_mut();
         let mut inner = if let Some(inner) = fut.inner.get() {
             inner
@@ -278,7 +281,7 @@ where
 
     fn poll_next(
         self: Pin<&mut Self>,
-        ctx: &mut FutContext,
+        ctx: &mut task::Context,
     ) -> Poll<raw::AsyncMessageRet<Self::Actor>> {
         let stream = self.get_mut();
         let mut inner = if let Some(inner) = stream.inner.get() {
@@ -319,7 +322,7 @@ where
 
     fn poll_read(
         self: Pin<&mut Self>,
-        ctx: &mut FutContext,
+        ctx: &mut task::Context,
     ) -> Poll<raw::AsyncMessageRet<Self::Actor>> {
         let stream = self.get_mut();
         let mut inner = if let Some(inner) = stream.inner.get() {
@@ -363,7 +366,10 @@ where
 {
     type Actor = A;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<raw::AsyncMessageRet<Self::Actor>> {
+    fn poll(
+        self: Pin<&mut Self>,
+        ctx: &mut task::Context,
+    ) -> Poll<raw::AsyncMessageRet<Self::Actor>> {
         let fut = self.get_mut();
         let mut inner = if let Some(inner) = fut.inner.get() {
             inner
