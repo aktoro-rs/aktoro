@@ -243,10 +243,7 @@ where
 {
     type Actor = A;
 
-    fn poll(
-        self: Pin<&mut Self>,
-        ctx: &mut FutContext,
-    ) -> Poll<raw::AsyncMessageRet<Self::Actor>> {
+    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<raw::AsyncMessageRet<Self::Actor>> {
         let fut = self.get_mut();
         let mut inner = if let Some(inner) = fut.inner.get() {
             inner
@@ -366,10 +363,7 @@ where
 {
     type Actor = A;
 
-    fn poll(
-        self: Pin<&mut Self>,
-        ctx: &mut FutContext,
-    ) -> Poll<raw::AsyncMessageRet<Self::Actor>> {
+    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<raw::AsyncMessageRet<Self::Actor>> {
         let fut = self.get_mut();
         let mut inner = if let Some(inner) = fut.inner.get() {
             inner
@@ -377,8 +371,7 @@ where
             return Poll::Ready(None);
         };
 
-        match Pin::new(&mut inner).poll_write(ctx, fut.data.as_ref().unwrap())
-        {
+        match Pin::new(&mut inner).poll_write(ctx, fut.data.as_ref().unwrap()) {
             Poll::Ready(Ok(wrote)) => {
                 let msg = (fut.map)((fut.data.take().unwrap(), wrote), inner);
 

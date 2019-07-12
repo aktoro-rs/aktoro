@@ -8,9 +8,9 @@ pub use aktoro_runtime as runtime;
 
 pub mod prelude {
     pub use aktoro_raw::Actor;
-    pub use aktoro_raw::Context as RawContext;
     pub use aktoro_raw::Cancellable;
     pub use aktoro_raw::Cancelling;
+    pub use aktoro_raw::Context as RawContext;
 
     pub use aktoro_raw::ActionHandler;
     pub use aktoro_raw::EventHandler;
@@ -27,11 +27,11 @@ pub mod prelude {
     pub use aktoro_raw::Updater as RawUpdater;
 
     pub use aktoro_raw::NetworkManager as RawNetworkManager;
+    pub use aktoro_raw::OwnedTcpServerIncoming;
     pub use aktoro_raw::TcpClient as RawTcpClient;
     pub use aktoro_raw::TcpServer as RawTcpServer;
     pub use aktoro_raw::TcpServerIncoming;
     pub use aktoro_raw::TcpStream as RawTcpStream;
-    pub use aktoro_raw::OwnedTcpServerIncoming;
     pub use aktoro_raw::UdpSocket as RawUdpSocket;
 
     #[cfg(feature = "context")]

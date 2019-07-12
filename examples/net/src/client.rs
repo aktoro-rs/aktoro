@@ -2,8 +2,8 @@ use std::pin::Pin;
 
 use aktoro::prelude::*;
 use aktoro::raw;
-use futures_util::AsyncReadExt;
 use futures_util::io::WriteHalf;
+use futures_util::AsyncReadExt;
 
 use crate::Received;
 use crate::Sent;
@@ -59,7 +59,11 @@ where
     type Output = ();
 
     fn handle(&mut self, msg: ConnectedErr<C>, ctx: &mut Self::Context) -> Result<(), Self::Error> {
-        println!("client({}): failed connecting; reason={}", ctx.actor_id(), msg.0);
+        println!(
+            "client({}): failed connecting; reason={}",
+            ctx.actor_id(),
+            msg.0
+        );
 
         ctx.set_status(Status::Dead);
 
@@ -89,7 +93,11 @@ where
     type Output = ();
 
     fn handle(&mut self, msg: Received, ctx: &mut Self::Context) -> Result<(), Self::Error> {
-        println!("client({}): received data; data={:?}", ctx.actor_id(), msg.0);
+        println!(
+            "client({}): received data; data={:?}",
+            ctx.actor_id(),
+            msg.0
+        );
 
         println!("client({}): connecting (failing)", ctx.actor_id());
         let connect = self.closed_connect.take().unwrap();

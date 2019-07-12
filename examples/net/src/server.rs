@@ -46,17 +46,19 @@ where
 
         let actor_id = ctx.actor_id();
         println!("server({}): closing", actor_id);
-        ctx.blocking_wait(Box::pin(self.cancellable.take().unwrap().cancel()), move |_| {
-            println!("server({}): closed", actor_id);
-            ()
-        });
+        ctx.blocking_wait(
+            Box::pin(self.cancellable.take().unwrap().cancel()),
+            move |_| println!("server({}): closed", actor_id),
+        );
 
         let (read, write) = msg.0.split();
-        let spawned = ctx.spawn(Agent {
-            read: Some(Box::pin(read)),
-            write: Some(Box::pin(write)),
-            cancellable: None,
-        }).unwrap();
+        let spawned = ctx
+            .spawn(Agent {
+                read: Some(Box::pin(read)),
+                write: Some(Box::pin(write)),
+                cancellable: None,
+            })
+            .unwrap();
 
         ctx.subscribe(spawned.boxed(), |_| Died);
 
@@ -71,7 +73,11 @@ where
     type Output = ();
 
     fn handle(&mut self, _: Died, ctx: &mut Self::Context) -> Result<(), Self::Error> {
-        println!("server({}): agent died; remaining: {:?}", ctx.actor_id(), ctx.actors());
+        println!(
+            "server({}): agent died; remaining: {:?}",
+            ctx.actor_id(),
+            ctx.actors()
+        );
 
         ctx.set_status(Status::Dead);
 

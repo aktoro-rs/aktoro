@@ -52,15 +52,12 @@ async fn main() {
     let mut run = runtime::spawn(run("World", spawned)).fuse();
     let mut wait = rt.wait().fuse();
 
-    loop {
-        select! {
-            _ = run => break,
-            res = wait.next() => {
-                res.unwrap()
-                    .expect("an error occured while waiting for the runtime to stop");
-                break;
-            },
-        }
+    select! {
+        _ = run => (),
+        res = wait.next() => {
+            res.unwrap()
+                .expect("an error occured while waiting for the runtime to stop");
+        },
     }
 }
 

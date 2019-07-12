@@ -155,12 +155,7 @@ impl Stream for Wait {
 
             match (removed, res) {
                 (Some(_), Err(err)) => return Poll::Ready(Some(Err((id, err)))),
-                (None, Err(err)) => {
-                    return Poll::Ready(Some(Err((
-                        id,
-                        Error::std(err),
-                    ))))
-                }
+                (None, Err(err)) => return Poll::Ready(Some(Err((id, Error::std(err))))),
                 _ => return Poll::Ready(Some(Ok(id))),
             }
         }

@@ -27,9 +27,7 @@ where
     fn started(&mut self, ctx: &mut Self::Context) {
         println!("agent({}): started", ctx.actor_id());
 
-        self.cancellable = Some(
-            ctx.read(self.read.take().unwrap(), 64, Received, |_| ()),
-        );
+        self.cancellable = Some(ctx.read(self.read.take().unwrap(), 64, Received, |_| ()));
     }
 }
 
@@ -43,7 +41,9 @@ where
         println!("agent({}): sent data", ctx.actor_id());
 
         println!("agent({}): closing stream", ctx.actor_id());
-        ctx.wait(Box::pin(self.cancellable.take().unwrap().cancel()), |_| Closed);
+        ctx.wait(Box::pin(self.cancellable.take().unwrap().cancel()), |_| {
+            Closed
+        });
 
         Ok(())
     }
@@ -58,7 +58,12 @@ where
     fn handle(&mut self, msg: Received, ctx: &mut Self::Context) -> Result<(), Self::Error> {
         println!("agent({}): received data; data={:?}", ctx.actor_id(), msg.0);
 
-        ctx.write(self.write.take().unwrap(), vec![0], |_, write| Sent(write), |_| ());
+        ctx.write(
+            self.write.take().unwrap(),
+            vec![0],
+            |_, write| Sent(write),
+            |_| (),
+        );
 
         Ok(())
     }

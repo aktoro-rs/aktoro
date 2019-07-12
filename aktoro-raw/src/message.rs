@@ -25,17 +25,13 @@ pub trait AsyncMessageFut: Send {
 pub trait AsyncMessageStream: Send {
     type Actor: Actor;
 
-    fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext)
-        -> Poll<AsyncMessageRet<Self::Actor>>;
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<AsyncMessageRet<Self::Actor>>;
 }
 
 pub trait AsyncReadStream: Send {
     type Actor: Actor;
 
-    fn poll_read(
-        self: Pin<&mut Self>,
-        ctx: &mut FutContext,
-    ) -> Poll<AsyncMessageRet<Self::Actor>>;
+    fn poll_read(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<AsyncMessageRet<Self::Actor>>;
 }
 
 pub trait Handler<M: Send>: Actor {

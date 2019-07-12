@@ -250,7 +250,13 @@ where
         cancellable
     }
 
-    fn read<R, M, N, T, E>(&mut self, read: Pin<Box<R>>, cap: usize, map: M, map_err: N) -> raw::Cancellable<R>
+    fn read<R, M, N, T, E>(
+        &mut self,
+        read: Pin<Box<R>>,
+        cap: usize,
+        map: M,
+        map_err: N,
+    ) -> raw::Cancellable<R>
     where
         R: AsyncRead + Unpin + Send + 'static,
         M: Fn(Vec<u8>) -> T + Unpin + Send + Sync + 'static,
@@ -267,7 +273,13 @@ where
         cancellable
     }
 
-    fn write<W, M, N, T, E>(&mut self, write: Pin<Box<W>>, data: Vec<u8>, map: M, map_err: N) -> raw::Cancellable<W>
+    fn write<W, M, N, T, E>(
+        &mut self,
+        write: Pin<Box<W>>,
+        data: Vec<u8>,
+        map: M,
+        map_err: N,
+    ) -> raw::Cancellable<W>
     where
         W: AsyncWrite + Unpin + Send + 'static,
         M: Fn((Vec<u8>, usize), Pin<Box<W>>) -> T + Unpin + Send + Sync + 'static,
@@ -284,7 +296,13 @@ where
         cancellable
     }
 
-    fn blocking_write<W, M, N, T, E>(&mut self, write: Pin<Box<W>>, data: Vec<u8>, map: M, map_err: N) -> raw::Cancellable<W>
+    fn blocking_write<W, M, N, T, E>(
+        &mut self,
+        write: Pin<Box<W>>,
+        data: Vec<u8>,
+        map: M,
+        map_err: N,
+    ) -> raw::Cancellable<W>
     where
         W: AsyncWrite + Unpin + Send + 'static,
         M: Fn((Vec<u8>, usize), Pin<Box<W>>) -> T + Unpin + Send + Sync + 'static,
@@ -470,8 +488,6 @@ where
 
 impl Default for ContextConfig {
     fn default() -> Self {
-        ContextConfig {
-            ready: None,
-        }
+        ContextConfig { ready: None }
     }
 }

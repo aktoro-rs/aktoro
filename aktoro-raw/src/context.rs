@@ -145,7 +145,13 @@ pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send + Sized {
         T: Send + 'static;
 
     // TODO
-    fn read<R, M, N, T, E>(&mut self, read: Pin<Box<R>>, cap: usize, map: M, map_err: N) -> Cancellable<R>
+    fn read<R, M, N, T, E>(
+        &mut self,
+        read: Pin<Box<R>>,
+        cap: usize,
+        map: M,
+        map_err: N,
+    ) -> Cancellable<R>
     where
         R: AsyncRead + Unpin + Send + 'static,
         M: Fn(Vec<u8>) -> T + Unpin + Send + Sync + 'static,
@@ -155,7 +161,13 @@ pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send + Sized {
         E: Send + 'static;
 
     // TODO
-    fn write<W, M, N, T, E>(&mut self, write: Pin<Box<W>>, data: Vec<u8>, map: M, map_err: N) -> Cancellable<W>
+    fn write<W, M, N, T, E>(
+        &mut self,
+        write: Pin<Box<W>>,
+        data: Vec<u8>,
+        map: M,
+        map_err: N,
+    ) -> Cancellable<W>
     where
         W: AsyncWrite + Unpin + Send + 'static,
         M: Fn((Vec<u8>, usize), Pin<Box<W>>) -> T + Unpin + Send + Sync + 'static,
@@ -165,7 +177,13 @@ pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send + Sized {
         E: Send + 'static;
 
     // TODO
-    fn blocking_write<W, M, N, T, E>(&mut self, write: Pin<Box<W>>, data: Vec<u8>, map: M, map_err: N) -> Cancellable<W>
+    fn blocking_write<W, M, N, T, E>(
+        &mut self,
+        write: Pin<Box<W>>,
+        data: Vec<u8>,
+        map: M,
+        map_err: N,
+    ) -> Cancellable<W>
     where
         W: AsyncWrite + Unpin + Send + 'static,
         M: Fn((Vec<u8>, usize), Pin<Box<W>>) -> T + Unpin + Send + Sync + 'static,
@@ -206,9 +224,9 @@ impl<C> Cancellable<C> {
                     inner: inner.clone(),
                     done: done.clone(),
                     waker: waker.clone(),
-                }
+                },
             },
-            CancellableInner { inner, done, waker, },
+            CancellableInner { inner, done, waker },
         )
     }
 
