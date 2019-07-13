@@ -1,4 +1,4 @@
-use std::error::Error as StdError;
+use std::error;
 use std::fmt;
 use std::fmt::Debug;
 use std::fmt::Display;
@@ -207,11 +207,11 @@ impl TryRecvError {
     }
 }
 
-impl StdError for CloneError {}
+impl error::Error for CloneError {}
 
-impl<T> StdError for TrySendError<T> {}
+impl<T> error::Error for TrySendError<T> {}
 
-impl StdError for TryRecvError {}
+impl error::Error for TryRecvError {}
 
 impl Display for CloneError {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {

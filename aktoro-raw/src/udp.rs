@@ -1,4 +1,4 @@
-use std::error::Error as StdError;
+use std::error;
 use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 
@@ -8,8 +8,8 @@ pub type UdpSocketSendTo<'s, E> = Box<dyn Future<Output = Result<usize, E>> + 's
 
 pub type UdpSocketRecv<'s, E> = Box<dyn Future<Output = Result<(usize, SocketAddr), E>> + 's>;
 
-pub trait UdpSocket: Sized {
-    type Error: StdError;
+pub trait UdpSocket: Unpin + Send + Sized {
+    type Error: error::Error + Send + 'static;
 
     /// Tries to create a new UDP socket that
     /// will be bound to the given address.

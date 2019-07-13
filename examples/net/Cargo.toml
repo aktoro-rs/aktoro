@@ -1,12 +1,13 @@
 [package]
-name    = "hello_world"
-version = "0.0.0"
+name    = "net"
+version = "0.1.0"
 license = "MIT"
 authors = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
 edition = "2018"
 
 [dependencies]
-runtime = "0.3.0-alpha.6"
+futures-io-preview = "0.3.0-alpha.17"
+runtime            = "0.3.0-alpha.6"
 
 [dependencies.aktoro]
 path    = "../.."
@@ -14,4 +15,4 @@ version = "0.1.0-alpha.3"
 
 [dependencies.futures-util-preview]
 version  = "0.3.0-alpha.17"
-features = ["nightly", "async-await", "select-macro"]
+features = ["nightly", "async-await"]

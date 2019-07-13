@@ -2,12 +2,14 @@
 
 mod actor;
 mod error;
+mod net;
 mod runtime;
 mod tcp;
 mod udp;
 
 pub use crate::actor::Status;
 pub use crate::error::Error;
+pub use crate::net::NetworkManager;
 pub use crate::runtime::Runtime;
 pub use crate::tcp::TcpClient;
 pub use crate::tcp::TcpServer;

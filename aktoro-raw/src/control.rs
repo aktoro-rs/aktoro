@@ -1,4 +1,4 @@
-use std::error::Error as StdError;
+use std::error;
 
 use futures_core::future::BoxFuture;
 use futures_core::Stream;
@@ -16,10 +16,10 @@ use crate::actor::Actor;
 /// [`Controller::try_send`]: trait.Controller.html#method.try_send
 pub type ControllerRes<'c, O, E> = Result<BoxFuture<'c, Result<O, E>>, E>;
 
-pub trait Controller<A: Actor>: Clone {
+pub trait Controller<A: Actor>: Unpin + Clone + Send {
     type Controlled: Controlled<A>;
 
-    type Error: StdError + Send;
+    type Error: error::Error + Send + 'static;
 
     /// Tries to send an action to be handled by the
     /// actor.
@@ -29,4 +29,4 @@ pub trait Controller<A: Actor>: Clone {
         D: Send + 'static;
 }
 
-pub trait Controlled<A: Actor>: Stream<Item = Box<dyn Action<Actor = A>>> {}
+pub trait Controlled<A: Actor>: Stream<Item = Box<dyn Action<Actor = A>>> + Unpin + Send {}

@@ -2,14 +2,14 @@ use std::future::Future;
 use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
 use std::pin::Pin;
-use std::task::Context as FutContext;
+use std::task;
 use std::task::Poll;
 
 use aktoro_raw as raw;
 use futures_core::Stream;
+use futures_io as io;
 use futures_io::AsyncRead;
 use futures_io::AsyncWrite;
-use futures_io::Error as FutError;
 use runtime::net;
 
 use crate::error::Error;
@@ -48,6 +48,20 @@ pub struct Connect {
 pub struct TcpIncoming<'i> {
     /// The actual stream.
     incoming: net::tcp::IncomingStream<'i>,
+}
+
+/// A stream that yields new TCP
+/// connections.
+///
+/// ## Note
+///
+/// It is similar to [`TcpIncoming`]
+/// but because it actually holds the
+/// tcp server it doesn't have lifetime
+/// issues.
+pub struct OwnedTcpIcoming {
+    /// The tcp server.
+    server: TcpServer,
 }
 
 /// A TCP stream, owned by a server,
@@ -89,12 +103,18 @@ impl raw::TcpServer for TcpServer {
         }
     }
 
-    fn incoming<'s>(
-        &'s mut self,
-    ) -> Result<Box<dyn Stream<Item = Result<TcpStream, Error>> + 's>, Error> {
+    fn incoming<'i>(
+        &'i mut self,
+    ) -> Result<Box<dyn Stream<Item = Result<TcpStream, Error>> + Unpin + Send + 'i>, Error> {
         Ok(Box::new(TcpIncoming {
             incoming: self.listener.incoming(),
         }))
+    }
+
+    fn into_incoming(
+        self,
+    ) -> Result<Box<dyn Stream<Item = Result<TcpStream, Error>> + Unpin + Send>, Error> {
+        Ok(Box::new(OwnedTcpIcoming { server: self }))
     }
 }
 
@@ -137,7 +157,7 @@ impl raw::TcpStream for TcpStream {
 impl Future for Connect {
     type Output = Result<TcpClient, Error>;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Self::Output> {
         match Pin::new(&mut self.get_mut().connect).poll(ctx) {
             Poll::Ready(Ok(stream)) => Poll::Ready(Ok(TcpClient { stream })),
             Poll::Ready(Err(err)) => Poll::Ready(Err(Box::new(err).into())),
@@ -149,7 +169,7 @@ impl Future for Connect {
 impl<'i> Stream for TcpIncoming<'i> {
     type Item = Result<TcpStream, Error>;
 
-    fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Option<Self::Item>> {
         match Pin::new(&mut self.get_mut().incoming).poll_next(ctx) {
             Poll::Ready(Some(res)) => match res {
                 Ok(stream) => Poll::Ready(Some(Ok(TcpStream { stream }))),
@@ -161,30 +181,45 @@ impl<'i> Stream for TcpIncoming<'i> {
     }
 }
 
+impl Stream for OwnedTcpIcoming {
+    type Item = Result<TcpStream, Error>;
+
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Option<Self::Item>> {
+        match Pin::new(&mut self.get_mut().server.listener.accept()).poll(ctx) {
+            Poll::Ready(Ok((stream, _))) => Poll::Ready(Some(Ok(TcpStream { stream }))),
+            Poll::Ready(Err(err)) => Poll::Ready(Some(Err(Box::new(err).into()))),
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
 impl AsyncRead for TcpClient {
     fn poll_read(
         self: Pin<&mut Self>,
-        ctx: &mut FutContext,
+        ctx: &mut task::Context,
         buf: &mut [u8],
-    ) -> Poll<Result<usize, FutError>> {
-        Pin::new(&mut self.get_mut().stream).poll_read(ctx, buf)
+    ) -> Poll<Result<usize, io::Error>> {
+        match Pin::new(&mut self.get_mut().stream).poll_read(ctx, buf) {
+            Poll::Ready(Ok(read)) if read == 0 => Poll::Pending,
+            polled => polled,
+        }
     }
 }
 
 impl AsyncWrite for TcpClient {
     fn poll_write(
         self: Pin<&mut Self>,
-        ctx: &mut FutContext,
+        ctx: &mut task::Context,
         buf: &[u8],
-    ) -> Poll<Result<usize, FutError>> {
+    ) -> Poll<Result<usize, io::Error>> {
         Pin::new(&mut self.get_mut().stream).poll_write(ctx, buf)
     }
 
-    fn poll_flush(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Result<(), FutError>> {
+    fn poll_flush(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Result<(), io::Error>> {
         Pin::new(&mut self.get_mut().stream).poll_flush(ctx)
     }
 
-    fn poll_close(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Result<(), FutError>> {
+    fn poll_close(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Result<(), io::Error>> {
         Pin::new(&mut self.get_mut().stream).poll_close(ctx)
     }
 }
@@ -192,27 +227,30 @@ impl AsyncWrite for TcpClient {
 impl AsyncRead for TcpStream {
     fn poll_read(
         self: Pin<&mut Self>,
-        ctx: &mut FutContext,
+        ctx: &mut task::Context,
         buf: &mut [u8],
-    ) -> Poll<Result<usize, FutError>> {
-        Pin::new(&mut self.get_mut().stream).poll_read(ctx, buf)
+    ) -> Poll<Result<usize, io::Error>> {
+        match Pin::new(&mut self.get_mut().stream).poll_read(ctx, buf) {
+            Poll::Ready(Ok(read)) if read == 0 => Poll::Pending,
+            polled => polled,
+        }
     }
 }
 
 impl AsyncWrite for TcpStream {
     fn poll_write(
         self: Pin<&mut Self>,
-        ctx: &mut FutContext,
+        ctx: &mut task::Context,
         buf: &[u8],
-    ) -> Poll<Result<usize, FutError>> {
+    ) -> Poll<Result<usize, io::Error>> {
         Pin::new(&mut self.get_mut().stream).poll_write(ctx, buf)
     }
 
-    fn poll_flush(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Result<(), FutError>> {
+    fn poll_flush(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Result<(), io::Error>> {
         Pin::new(&mut self.get_mut().stream).poll_flush(ctx)
     }
 
-    fn poll_close(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Result<(), FutError>> {
+    fn poll_close(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Result<(), io::Error>> {
         Pin::new(&mut self.get_mut().stream).poll_close(ctx)
     }
 }

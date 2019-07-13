@@ -1,5 +1,5 @@
 use std::pin::Pin;
-use std::task::Context as FutContext;
+use std::task;
 use std::task::Poll;
 
 use aktoro_channel as channel;
@@ -40,7 +40,7 @@ pub(crate) fn new<A: raw::Actor>() -> (Sender<A>, Receiver<A>) {
 
 impl<A> raw::Sender<A> for Sender<A>
 where
-    A: raw::Actor,
+    A: raw::Actor + 'static,
 {
     type Receiver = Receiver<A>;
 
@@ -49,7 +49,7 @@ where
     fn try_send<M>(&mut self, msg: M) -> raw::SenderRes<A::Output, Self::Error>
     where
         A: raw::Handler<M>,
-        M: Send,
+        M: Send + 'static,
     {
         let (msg, recv) = Message::new(msg);
 
@@ -67,7 +67,7 @@ where
 {
     type Item = Box<dyn raw::Message<Actor = A>>;
 
-    fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Option<Self::Item>> {
         Pin::new(&mut self.get_mut().0).poll_next(ctx)
     }
 }

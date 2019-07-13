@@ -1,4 +1,4 @@
-use std::error::Error as StdError;
+use std::error;
 
 use futures_core::future::BoxFuture;
 use futures_core::Stream;
@@ -16,17 +16,17 @@ use crate::message::Message;
 /// [`Sender::try_send`]: trait.Sender.html#method.try_send
 pub type SenderRes<'s, O, E> = Result<BoxFuture<'s, Result<O, E>>, E>;
 
-pub trait Sender<A: Actor>: Clone {
+pub trait Sender<A: Actor>: Unpin + Clone + Send {
     type Receiver: Receiver<A>;
 
-    type Error: StdError + Send;
+    type Error: error::Error + Send + 'static;
 
     /// Tries to send a message to be handled by the
     /// actor.
     fn try_send<M>(&mut self, msg: M) -> SenderRes<A::Output, Self::Error>
     where
         A: Handler<M>,
-        M: Send;
+        M: Send + 'static;
 }
 
-pub trait Receiver<A: Actor>: Stream<Item = Box<dyn Message<Actor = A>>> {}
+pub trait Receiver<A: Actor>: Stream<Item = Box<dyn Message<Actor = A>>> + Unpin + Send {}

@@ -1,4 +1,4 @@
-use std::error::Error as StdError;
+use std::error;
 use std::fmt;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -10,30 +10,20 @@ pub struct Error {
 
 #[derive(Debug)]
 pub enum ErrorKind {
-    /// The actor has already been removed from
-    /// the runtime's actors list.
-    AlreadyRemoved(u64),
     /// Returns a `Box` contaning any error type
     /// that implements the [`Error`] trait.
     ///
     /// [`Error`]: https://doc.rust-lang.org/std/error/trait.Error.html
-    Std(Box<dyn StdError + Send>),
+    Std(Box<dyn error::Error + Send>),
     /// Multiple errors occured.
     Multiple(Vec<Error>),
 }
 
 impl Error {
-    /// Creates a new "already removed" error.
-    pub(crate) fn already_removed(id: u64) -> Self {
-        Error {
-            kind: ErrorKind::AlreadyRemoved(id),
-        }
-    }
-
     /// Creates a new boxed error.
     pub(crate) fn std<S>(err: S) -> Self
     where
-        S: StdError + Send + 'static,
+        S: error::Error + Send + 'static,
     {
         Error {
             kind: ErrorKind::Std(Box::new(err)),
@@ -88,17 +78,6 @@ impl Error {
         }
     }
 
-    /// Whether the error occured because the actor
-    /// was already removed from the runtime's actors
-    /// list.
-    pub fn is_already_removed(&self) -> bool {
-        if let ErrorKind::AlreadyRemoved(_) = self.kind {
-            true
-        } else {
-            false
-        }
-    }
-
     /// Whether multiple errors occured.
     pub fn is_multiple(&self) -> bool {
         if let ErrorKind::Multiple(_) = self.kind {
@@ -120,14 +99,11 @@ impl Error {
     }
 }
 
-impl StdError for Error {}
+impl error::Error for Error {}
 
 impl Display for Error {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         match &self.kind {
-            ErrorKind::AlreadyRemoved(id) => {
-                write!(fmt, "actor ({}) already removed from list", id,)
-            }
             ErrorKind::Std(err) => write!(fmt, "{}", err),
             ErrorKind::Multiple(_) => write!(fmt, "multiple errors",),
         }
@@ -142,7 +118,7 @@ impl From<ErrorKind> for Error {
 
 impl<S> From<Box<S>> for Error
 where
-    S: StdError + Send + 'static,
+    S: error::Error + Send + 'static,
 {
     fn from(err: Box<S>) -> Error {
         Error {

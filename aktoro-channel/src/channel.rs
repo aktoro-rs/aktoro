@@ -1,21 +1,35 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::task::Waker;
+use std::sync::Arc;
+use std::task;
 
 use crossbeam_queue::SegQueue;
+use crossbeam_utils::atomic::AtomicCell;
 
 use crate::counters::Counters;
 use crate::error::*;
 use crate::message::Message;
 use crate::queue::Queue;
 
+type Waker = Arc<AtomicCell<(bool, Option<task::Waker>)>>;
+
 /// A channel allowing senders to pass
 /// messages over it, and receivers to
 /// retrieve them.
 pub(crate) struct Channel<T> {
+    /// The queue that is holding the
+    /// messages that have not been
+    /// received yet.
     pub(crate) queue: Queue<Message<T>>,
+    /// Whether the channel is closed.
     pub(crate) closed: AtomicBool,
+    /// The counters used to store the
+    /// current number of senders,
+    /// receivers, messages and the
+    /// channel's limits.
     pub(crate) counters: Counters,
+    /// A list of the wakers that can
+    /// be used to wake up receivers.
     pub(crate) wakers: SegQueue<Waker>,
 }
 
@@ -71,9 +85,7 @@ impl<T> Channel<T> {
         }
     }
 
-    /// Registers a new waker to be
-    /// notified when a new message is
-    /// available.
+    /// Registers a new waker.
     pub(crate) fn register(&self, waker: Waker) {
         self.wakers.push(waker);
     }
@@ -82,7 +94,17 @@ impl<T> Channel<T> {
     /// available.
     fn notify(&self) {
         if let Ok(waker) = self.wakers.pop() {
-            waker.wake();
+            match waker.swap((true, None)) {
+                (true, Some(waker_)) => {
+                    self.wakers.push(waker);
+                    waker_.wake();
+                }
+                (true, None) => {
+                    self.wakers.push(waker);
+                    self.notify();
+                }
+                _ => self.notify(),
+            }
         }
     }
 

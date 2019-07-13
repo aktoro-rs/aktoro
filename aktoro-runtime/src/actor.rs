@@ -1,6 +1,6 @@
 use std::future::Future;
 use std::pin::Pin;
-use std::task::Context as FutContext;
+use std::task;
 use std::task::Poll;
 
 use aktoro_channel as channel;
@@ -26,7 +26,7 @@ pub(crate) struct Actor<A: raw::Actor> {
     killed: KilledSender,
 }
 
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 /// A default implementation for the
 /// [`aktoro-raw::Status`] trait.
 ///
@@ -139,19 +139,22 @@ impl<A: raw::Actor> Actor<A> {
         // dead.
         self.ctx.set_status(A::Status::dead());
 
-        // We try to push the actor's
-        // new status over its update
-        // channel.
-        if let Err(err) = self.ctx.update() {
-            return Err(Box::new(err).into());
-        }
-
         // We try to notify the actor's
         // death over the killed channel.
         if let Err(err) = self.killed.killed(self.id) {
             return Err(Box::new(err).into());
         }
 
+        // We try to push the actor's
+        // new status over its update
+        // channel.
+        // NOTE: this is done after sending
+        //   the death notification because
+        //   if the `Spanwed` linked to
+        //   this actor has been dropped,
+        //   it will return an error.
+        // TODO: should we take care of the possible errors?
+        self.ctx.update().ok();
         Ok(())
     }
 }
@@ -216,10 +219,13 @@ impl KilledSender {
     }
 }
 
-impl<A: raw::Actor> Future for Actor<A> {
+impl<A> Future for Actor<A>
+where
+    A: raw::Actor + 'static,
+{
     type Output = Result<(), Error>;
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Self::Output> {
         let actor = self.get_mut();
 
         loop {
@@ -324,7 +330,7 @@ impl<A: raw::Actor> Future for Actor<A> {
 impl Future for KillRecver {
     type Output = ();
 
-    fn poll(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<()> {
+    fn poll(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<()> {
         let recver = self.get_mut();
 
         if let Some(notify) = &mut recver.0 {
@@ -342,7 +348,7 @@ impl Future for KillRecver {
 impl Stream for KilledRecver {
     type Item = u64;
 
-    fn poll_next(self: Pin<&mut Self>, ctx: &mut FutContext) -> Poll<Option<u64>> {
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut task::Context) -> Poll<Option<u64>> {
         Pin::new(&mut self.get_mut().0).poll_next(ctx)
     }
 }

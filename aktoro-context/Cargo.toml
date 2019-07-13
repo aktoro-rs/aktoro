@@ -9,6 +9,7 @@ edition     = "2018"
 [dependencies]
 crossbeam-utils      = "0.6"
 futures-core-preview = "0.3.0-alpha.17"
+futures-io-preview   = "0.3.0-alpha.17"
 futures-util-preview = "0.3.0-alpha.17"
 
 [dependencies.aktoro-channel]
