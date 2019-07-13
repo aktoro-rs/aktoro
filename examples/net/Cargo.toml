@@ -1,6 +1,6 @@
 [package]
 name    = "net"
-version = "0.1.0"
+version = "0.0.0"
 license = "MIT"
 authors = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
 edition = "2018"
@@ -11,7 +11,7 @@ runtime            = "0.3.0-alpha.6"
 
 [dependencies.aktoro]
 path    = "../.."
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 
 [dependencies.futures-util-preview]
 version  = "0.3.0-alpha.17"

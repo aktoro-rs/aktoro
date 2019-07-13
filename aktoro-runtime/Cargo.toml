@@ -1,7 +1,7 @@
 [package]
 name        = "aktoro-runtime"
 description = "aktoro's runtime default implementation"
-version     = "0.1.0-alpha.3"
+version     = "0.1.0-alpha.4"
 license     = "MIT"
 authors     = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
 edition     = "2018"
@@ -15,11 +15,11 @@ rand_xoshiro         = "0.2"
 
 [dependencies.aktoro-channel]
 path    = "../aktoro-channel"
-version = "0.1.0-alpha.7"
+version = "0.1.0-alpha.8"
 
 [dependencies.aktoro-raw]
 path    = "../aktoro-raw"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 
 [dependencies.runtime]
 version          = "0.3.0-alpha.6"
