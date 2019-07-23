@@ -22,6 +22,7 @@ use crate::control::Controlled;
 use crate::control::Controller;
 use crate::event::Event;
 use crate::message::AsyncMessageFut;
+use crate::message::AsyncMessageFutMap;
 use crate::message::AsyncMessageStream;
 use crate::message::AsyncReadStream;
 use crate::message::AsyncWriteFut;
@@ -235,7 +236,19 @@ where
     {
         let (cancellable, inner) = raw::Cancellable::new(fut);
 
-        self.futs.push(Box::pin(AsyncMessageFut::new(inner, map)));
+        self.futs.push(Box::pin(AsyncMessageFutMap::new(inner, map)));
+
+        cancellable
+    }
+
+    fn exec<F, O>(&mut self, fut: Pin<Box<F>>) -> raw::Cancellable<F>
+    where
+        F: Future<Output = O> + Unpin + Send + 'static,
+        O: Send + 'static,
+    {
+        let (cancellable, inner) = raw::Cancellable::new(fut);
+
+        self.futs.push(Box::pin(AsyncMessageFut::new(inner)));
 
         cancellable
     }
@@ -249,7 +262,20 @@ where
         T: Send + 'static,
     {
         let (cancellable, inner) = raw::Cancellable::new(fut);
-        self.b_futs.push(Box::pin(AsyncMessageFut::new(inner, map)));
+
+        self.b_futs.push(Box::pin(AsyncMessageFutMap::new(inner, map)));
+
+        cancellable
+    }
+
+    fn blocking_exec<F, O>(&mut self, fut: Pin<Box<F>>) -> raw::Cancellable<F>
+    where
+        F: Future<Output = O> + Unpin + Send + 'static,
+        O: Send + 'static,
+    {
+        let (cancellable, inner) = raw::Cancellable::new(fut);
+
+        self.b_futs.push(Box::pin(AsyncMessageFut::new(inner)));
 
         cancellable
     }

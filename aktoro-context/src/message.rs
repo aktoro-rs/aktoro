@@ -32,7 +32,17 @@ where
     _act: PhantomData<A>,
 }
 
-pub(crate) struct AsyncMessageFut<A, F, M, O, T>
+pub(crate) struct AsyncMessageFut<A, F, O>
+where
+    A: raw::Actor,
+    F: Future<Output = O> + Unpin + Send,
+    O: Send,
+{
+    inner: raw::CancellableInner<F>,
+    _act: PhantomData<A>,
+}
+
+pub(crate) struct AsyncMessageFutMap<A, F, M, O, T>
 where
     A: raw::Handler<T, Output = ()>,
     F: Future<Output = O> + Unpin + Send,
@@ -122,7 +132,21 @@ where
     }
 }
 
-impl<A, F, M, O, T> AsyncMessageFut<A, F, M, O, T>
+impl<A, F, O> AsyncMessageFut<A, F, O>
+where
+    A: raw::Actor,
+    F: Future<Output = O> + Unpin + Send,
+    O: Send,
+{
+    pub(crate) fn new(inner: raw::CancellableInner<F>) -> Self {
+        AsyncMessageFut {
+            inner,
+            _act: PhantomData,
+        }
+    }
+}
+
+impl<A, F, M, O, T> AsyncMessageFutMap<A, F, M, O, T>
 where
     A: raw::Handler<T, Output = ()>,
     F: Future<Output = O> + Unpin + Send,
@@ -131,7 +155,7 @@ where
     T: Send,
 {
     pub(crate) fn new(inner: raw::CancellableInner<F>, map: M) -> Self {
-        AsyncMessageFut {
+        AsyncMessageFutMap {
             inner,
             map,
             _act: PhantomData,
@@ -233,7 +257,39 @@ where
     }
 }
 
-impl<A, F, M, O, T> raw::AsyncMessageFut for AsyncMessageFut<A, F, M, O, T>
+impl<A, F, O> raw::AsyncMessageFut for AsyncMessageFut<A, F, O>
+where
+    A: raw::Actor,
+    F: Future<Output = O> + Unpin + Send,
+    O: Send + 'static,
+{
+    type Actor = A;
+
+    fn poll(
+        self: Pin<&mut Self>,
+        ctx: &mut task::Context,
+    ) -> Poll<raw::AsyncMessageRet<Self::Actor>> {
+        let fut = self.get_mut();
+        let mut inner = if let Some(inner) = fut.inner.get() {
+            inner
+        } else {
+            return Poll::Ready(None);
+        };
+
+        match Pin::new(&mut inner).poll(ctx) {
+            Poll::Ready(_) => {
+                fut.inner.done();
+                Poll::Ready(None)
+            }
+            Poll::Pending => {
+                fut.inner.set(inner);
+                Poll::Pending
+            }
+        }
+    }
+}
+
+impl<A, F, M, O, T> raw::AsyncMessageFut for AsyncMessageFutMap<A, F, M, O, T>
 where
     A: raw::Handler<T, Output = ()> + 'static,
     F: Future<Output = O> + Unpin + Send,

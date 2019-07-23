@@ -164,6 +164,19 @@ pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send + Sized {
         O: Send + 'static,
         T: Send + 'static;
 
+    /// Waits for a future to yield.
+    ///
+    /// The execution can be cancelled using the
+    /// returned [`Cancellable`]. Cancelling the
+    /// execution, if it isn't done, will return
+    /// the original `fut`.
+    ///
+    /// [`Cancellable`]: struct.Cancellable.html
+    fn exec<F, O>(&mut self, fut: Pin<Box<F>>) -> Cancellable<F>
+    where
+        F: Future<Output = O> + Unpin + Send + 'static,
+        O: Send + 'static;
+
     /// Waits for a future to yield before mapping it
     /// to a message and passing it to the actor.
     ///
@@ -184,6 +197,23 @@ pub trait Context<A: Actor>: Stream<Item = Work<A>> + Unpin + Send + Sized {
         A: Handler<T, Output = ()>,
         O: Send + 'static,
         T: Send + 'static;
+
+    /// Waits for a future to yield.
+    ///
+    /// Until all the blocking futures/asynchronous writes
+    /// have yielded, no messages, events, streams, etc.
+    /// will be handled by the context.
+    ///
+    /// The execution can be cancelled using the
+    /// returned [`Cancellable`]. Cancelling the
+    /// execution, if it isn't done, will return
+    /// the original `fut`.
+    ///
+    /// [`Cancellable`]: struct.Cancellable.html
+    fn blocking_exec<F, O>(&mut self, fut: Pin<Box<F>>) -> Cancellable<F>
+    where
+        F: Future<Output = O> + Unpin + Send + 'static,
+        O: Send + 'static;
 
     /// Forwards the items yielded by a stream to
     /// the actor after mapping them to a message.
