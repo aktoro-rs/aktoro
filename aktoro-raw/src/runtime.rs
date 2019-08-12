@@ -1,5 +1,9 @@
 use std::error;
 
+use crate::actor::Actor;
+
+/// TODO: module documentation
+
 /// TODO: documentation
 ///
 /// TODO(method): spawn actor
@@ -34,4 +38,9 @@ pub trait Runtime: Sized {
 }
 
 /// TODO: documentation
-pub trait Handle: Unpin + Clone + Send {}
+pub trait Handle: Unpin + Clone + Send {
+    type Error: error::Error;
+
+    /// TODO: documentation
+    fn spawn<A: Actor>(&self) -> Result<(), Self::Error>;
+}
