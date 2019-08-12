@@ -1,14 +1,7 @@
-mod action;
-mod channel;
-mod context;
-mod control;
-mod event;
-mod message;
-mod respond;
-mod update;
+mod error;
 
-pub use crate::channel::Receiver;
-pub use crate::channel::Sender;
+pub mod context;
+
 pub use crate::context::Context;
-pub use crate::control::Controlled;
-pub use crate::control::Controller;
+pub use crate::error::Error;
+pub use crate::error::ErrorKind;

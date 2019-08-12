@@ -1,15 +1,15 @@
 [package]
 name        = "aktoro-runtime"
 description = "aktoro's runtime default implementation"
-version     = "0.1.0-alpha.4"
+version     = "0.1.0-alpha.5"
 license     = "MIT"
 authors     = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
 edition     = "2018"
 
 [dependencies]
 fnv                  = "1.0"
-futures-core-preview = "0.3.0-alpha.17"
-futures-io-preview   = "0.3.0-alpha.17"
+futures-core-preview = "0.3.0-alpha.18"
+futures-io-preview   = "0.3.0-alpha.18"
 rand                 = "0.6"
 rand_xoshiro         = "0.2"
 
@@ -19,7 +19,7 @@ version = "0.1.0-alpha.8"
 
 [dependencies.aktoro-raw]
 path    = "../aktoro-raw"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 
 [dependencies.runtime]
 version          = "0.3.0-alpha.6"

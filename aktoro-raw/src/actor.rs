@@ -1,74 +1,69 @@
 use std::error;
 
-use crate::context::Context;
+/// TODO: documentation
+pub trait Actor: Unpin + Send {
+    /// TODO: documentation
+    type Context;
 
-pub trait Actor: Unpin + Send + Sized {
-    type Context: Context<Self>;
+    /// TODO: documentation
+    type Status: Status;
 
-    type Status: Status + Unpin;
+    type Error: error::Error;
 
-    type Error: error::Error + Send + 'static;
+    /// TODO: documentation
+    fn starting(&mut self, _: &mut Self::Context) -> Result<Self::Status, Self::Error> {
+        Ok(Self::Status::started())
+    }
 
-    #[allow(unused)]
-    /// Called when the actor's context has been created
-    /// but it hasn't been spawned by the runtime yet.
-    fn starting(&mut self, ctx: &mut Self::Context) {}
+    /// TODO: documentation
+    fn started(&mut self, _: &mut Self::Context) -> Result<Self::Status, Self::Error> {
+        Ok(Self::Status::running())
+    }
 
-    #[allow(unused)]
-    /// Called when the actor's has been spawned by the
-    /// runtime and polled for the first time.
-    fn started(&mut self, ctx: &mut Self::Context) {}
+    /// TODO: documentation
+    fn stopping(&mut self, _: &mut Self::Context) -> Result<Self::Status, Self::Error> {
+        Ok(Self::Status::stopped())
+    }
 
-    #[allow(unused)]
-    /// Called when the actor has been asked to stop
-    /// but has been left the option to cancel it.
-    fn stopping(&mut self, ctx: &mut Self::Context) {}
+    /// TODO: documentation
+    fn stopped(&mut self, _: &mut Self::Context) -> Result<(), Self::Error> {
+        Ok(())
+    }
 
-    #[allow(unused)]
-    /// Called when the actor has accepted to stop or
-    /// it has been asked to stop immediately.
-    fn stopped(&mut self, ctx: &mut Self::Context) {}
+    /// TODO: documentation
+    fn dead(&mut self) {}
 }
 
-pub trait Status: PartialEq + Default + Clone + Unpin + Send {
-    /// Returns the status that an actor should have
-    /// before [`Actor::starting`] is called.
-    ///
-    /// [`Actor::starting`]: trait.Actor.html#method.starting
+/// TODO: documentation
+pub trait Status: PartialEq + Unpin + Send {
+    /// TODO: documentation
     fn starting() -> Self;
 
-    /// Returns the status that an actor should have
-    /// before [`Actor::started`] is called.
-    ///
-    /// [`Actor::started`]: trait.Actor.html#methood.started
+    /// TODO: documentation
     fn started() -> Self;
 
-    /// Returns the status that an actor should have
-    /// before [`Actor::stopping`] is called.
-    ///
-    /// ## Note
-    ///
-    /// If after [`Actor::stopping`] is called, its
-    /// status is still the same it will be stopped.
-    ///
-    /// [`Actor::stopping`]: trait.Actor.html#method.stopping
+    /// TODO: documentation
+    fn running() -> Self;
+
+    /// TODO: documentation
     fn stopping() -> Self;
 
-    /// Returns the status that an actor should have
-    /// before [`Actor::stopped`] is called.
-    ///
-    /// [`Actor::stopped`]: trait.Actor.html#method.stopped
+    /// TODO: documentation
     fn stopped() -> Self;
 
-    /// Returns the status that an actor will have
-    /// after [`Actor::stopped`] has been called.
-    ///
-    /// [`Actor::stopped`]: trait.Actor.html#method.stopped
+    /// TODO: documentation
     fn dead() -> Self;
 
+    /// TODO: documentation
     fn is_starting(&self) -> bool;
+    /// TODO: documentation
+    fn is_running(&self) -> bool;
+    /// TODO: documentation
     fn is_started(&self) -> bool;
+    /// TODO: documentation
     fn is_stopping(&self) -> bool;
+    /// TODO: documentation
     fn is_stopped(&self) -> bool;
+    /// TODO: documentation
     fn is_dead(&self) -> bool;
 }

@@ -1,16 +1,16 @@
 [package]
 name        = "aktoro-context"
 description = "aktoro's context default implementation"
-version     = "0.1.0-alpha.4"
+version     = "0.1.0-alpha.5"
 license     = "MIT"
 authors     = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
 edition     = "2018"
 
 [dependencies]
 crossbeam-utils      = "0.6"
-futures-core-preview = "0.3.0-alpha.17"
-futures-io-preview   = "0.3.0-alpha.17"
-futures-util-preview = "0.3.0-alpha.17"
+futures-core-preview = "0.3.0-alpha.18"
+futures-io-preview   = "0.3.0-alpha.18"
+futures-util-preview = "0.3.0-alpha.18"
 
 [dependencies.aktoro-channel]
 path    = "../aktoro-channel"
@@ -18,4 +18,4 @@ version = "0.1.0-alpha.8"
 
 [dependencies.aktoro-raw]
 path    = "../aktoro-raw"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"

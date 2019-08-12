@@ -9,11 +9,4 @@ edition     = "2018"
 [dependencies]
 crossbeam-queue      = "0.1"
 crossbeam-utils      = "0.6"
-futures-core-preview = "0.3.0-alpha.17"
-
-[dev-dependencies]
-runtime              = "0.3.0-alpha.6"
-
-[dev-dependencies.futures-util-preview]
-version  = "0.3.0-alpha.17"
-features = ["nightly", "async-await"]
+futures-core-preview = "0.3.0-alpha.18"

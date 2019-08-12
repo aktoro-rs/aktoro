@@ -1,7 +1,7 @@
 [package]
 name        = "aktoro"
 description = "Yet another actor framework for Rust."
-version     = "0.1.0-alpha.4"
+version     = "0.1.0-alpha.5"
 license     = "MIT"
 authors     = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
 edition     = "2018"
@@ -13,16 +13,16 @@ runtime = ["aktoro-runtime"]
 
 [dependencies.aktoro-context]
 path     = "aktoro-context"
-version  = "0.1.0-alpha.4"
+version  = "0.1.0-alpha.5"
 optional = true
 
 [dependencies.aktoro-raw]
 path    = "aktoro-raw"
-version = "0.1.0-alpha.4"
+version = "0.1.0-alpha.5"
 
 [dependencies.aktoro-runtime]
 path     = "aktoro-runtime"
-version  = "0.1.0-alpha.4"
+version  = "0.1.0-alpha.5"
 optional = true
 
 [workspace]
@@ -32,8 +32,5 @@ members = [
 	"aktoro-raw",
 
 	"aktoro-context",
-	"aktoro-runtime",
-
-	"examples/hello_world",
-	"examples/net",
+	"aktoro-runtime"
 ]
