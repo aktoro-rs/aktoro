@@ -50,7 +50,16 @@ impl raw::Runtime for Runtime {
     }
 }
 
-impl raw::runtime::Handle for Handle {}
+impl raw::runtime::Handle for Handle {
+    type Error = Error;
+
+    /// TODO: documentation
+    ///
+    /// TODO(inner): *
+    fn spawn<A: raw::Actor>(&self) -> Result<(), Error> {
+        Ok(()) // TODO
+    }
+}
 
 impl Default for Config {
     fn default() -> Self {
