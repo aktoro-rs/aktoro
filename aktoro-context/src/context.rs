@@ -40,6 +40,41 @@ where
     fn status(&self) -> &A::Status {
         &self.status
     }
+
+
+    /// TODO: documentation
+    ///
+    /// TODO(return): an handle to the result
+    /// TODO(inner): *
+    fn exec<D>(&self, action: D) -> Result<(), Error>
+    where
+        A: raw::handler::action::Handler<D>,
+        D: raw::handler::Action + 'static,
+    {
+        Ok(()) // TODO
+    }
+
+    /// TODO: documentation
+    ///
+    /// TODO(inner): *
+    fn emit<E>(&self, event: E) -> Result<(), Error>
+    where
+        A: raw::handler::event::Handler<E>,
+        E: raw::handler::Event + 'static,
+    {
+        Ok(()) // TODO
+    }
+
+    /// TODO: documentation
+    ///
+    /// TODO(param): link type
+    /// TODO(inner): *
+    fn link<H>(&self, handle: &H) -> Result<(), Error>
+    where
+        H: raw::actor::Handle,
+    {
+        Ok(()) // TODO
+    }
 }
 
 impl Default for Config {

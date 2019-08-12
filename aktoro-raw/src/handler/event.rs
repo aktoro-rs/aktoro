@@ -1,36 +1,17 @@
 use crate::actor::Actor;
 
-/// TODO: documentation
-pub trait Handler<E: Send>: Actor {
-    /// TODO: documentation
-    fn handle(&mut self, event: E, ctx: &mut Self::Context) -> Result<Output<Self>, Self::Error>;
-}
+use super::handled::Handled;
+use super::priority::Priority;
 
 /// TODO: documentation
-pub struct Output<A>
-where
-    A: Actor,
-{
-    status: Option<A::Status>,
-}
-
-impl<A> super::Output<A> for Output<A>
-where
-    A: Actor,
-{
-    /// TODO: documentation
-    fn status(&mut self, status: A::Status) {
-        self.status = Some(status);
+pub trait Event: Send {
+    fn priority(&self) -> Priority {
+        Priority::new()
     }
 }
 
-impl<A> Default for Output<A>
-where
-    A: Actor,
-{
-    fn default() -> Self {
-        Output {
-            status: None,
-        }
-    }
+/// TODO: documentation
+pub trait Handler<E: Event>: Actor {
+    /// TODO: documentation
+    fn handle(&mut self, event: E, ctx: &mut Self::Context) -> Result<Handled<Self>, Self::Error>;
 }

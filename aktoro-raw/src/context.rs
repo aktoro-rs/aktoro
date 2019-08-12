@@ -1,12 +1,14 @@
 use std::error;
 
+use crate::actor;
 use crate::actor::Actor;
+use crate::handler::action;
+use crate::handler::action::Action;
+use crate::handler::event;
+use crate::handler::event::Event;
 
 /// TODO: documentation
 ///
-/// TODO(method): do action
-/// TODO(method): emit event
-/// TODO(method): spawn an actor
 /// TODO(method): exec future; eventually blocking io-wise; eventually waiting for it
 /// TODO(method): subscribe to stream or reader
 /// TODO(trait): convert writing to async writer to an executable future
@@ -23,4 +25,25 @@ pub trait Context<A: Actor>: Unpin + Send + Sized {
 
     /// TODO: documentation
     fn status(&self) -> &A::Status;
+
+    /// TODO: documentation
+    ///
+    /// TODO(return): an handle to the result
+    fn exec<D>(&self, action: D) -> Result<(), Self::Error>
+    where
+        A: action::Handler<D>,
+        D: Action + 'static;
+
+    /// TODO: documentation
+    fn emit<E>(&self, event: E) -> Result<(), Self::Error>
+    where
+        A: event::Handler<E>,
+        E: Event + 'static;
+
+    /// TODO: documentation
+    ///
+    /// TODO(param): link type
+    fn link<H>(&self, handle: &H) -> Result<(), Self::Error>
+    where
+        H: actor::Handle;
 }

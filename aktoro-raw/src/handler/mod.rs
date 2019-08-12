@@ -1,7 +1,7 @@
-use crate::actor::Actor;
-use crate::actor::Status;
-
 /// TODO: module documentation
+
+mod priority;
+mod handled;
 
 /// TODO: documentation
 pub mod action;
@@ -12,35 +12,10 @@ pub mod event;
 /// TODO: documentation
 pub mod message;
 
-pub trait Output<A>: Default + Unpin + Send
-where
-    A: Actor,
-{
-    /// TODO: documentation
-    fn new() -> Self {
-        Default::default()
-    }
-
-    /// TODO: documentation
-    fn status(&mut self, status: A::Status);
-
-    /// TODO: documentation
-    fn stop(&mut self) {
-        self.status(A::Status::stopping());
-    }
-
-    /// TODO: documentation
-    fn force_stop(&mut self) {
-        self.status(A::Status::stopping());
-    }
-
-    /// TODO: documentation
-    fn kill(&mut self) {
-        self.status(A::Status::dead());
-    }
-
-    /// TODO: documentation
-    fn panic(&mut self, error: A::Error) {
-        self.status(A::Status::panicked(error));
-    }
-}
+pub use action::Action;
+pub use event::Event;
+pub use handled::Handled;
+pub use handled::HandleRes;
+pub use handled::Output;
+pub use message::Message;
+pub use priority::Priority;
