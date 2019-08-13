@@ -2,6 +2,7 @@ use aktoro_raw as raw;
 use aktoro_raw::actor::Status as RawStatus;
 
 use crate::error::Error;
+use crate::handle::Handle;
 
 /// TODO: documentation
 pub struct Config;
@@ -19,12 +20,15 @@ where
 
 impl<A> raw::Context<A> for Context<A>
 where
-    A: raw::Actor,
+    A: raw::Actor<Context = Self>
 {
     /// TODO: documentation
     type Config = Config;
 
     type Error = Error;
+
+    /// TODO: documentation
+    type Handle = Handle<A>;
 
     /// TODO: documentation
     ///
@@ -49,7 +53,7 @@ where
     fn exec<D>(&self, action: D) -> Result<(), Error>
     where
         A: raw::handler::action::Handler<D>,
-        D: raw::handler::Action + 'static,
+        D: raw::handler::Action,
     {
         Ok(()) // TODO
     }
@@ -60,18 +64,26 @@ where
     fn emit<E>(&self, event: E) -> Result<(), Error>
     where
         A: raw::handler::event::Handler<E>,
-        E: raw::handler::Event + 'static,
+        E: raw::handler::Event,
     {
         Ok(()) // TODO
     }
 
     /// TODO: documentation
     ///
+    /// TODO(inner): *
+    fn handle(&self) -> Result<Handle<A>, Error> {
+        Ok(Handle::new()) // TODO
+    }
+
+    /// TODO: documentation
+    ///
     /// TODO(param): link type
     /// TODO(inner): *
-    fn link<H>(&self, handle: &H) -> Result<(), Error>
+    fn link<H, C>(&self, handle: &H) -> Result<(), Error>
     where
-        H: raw::actor::Handle,
+        H: raw::actor::Handle<C>,
+        C: raw::Actor,
     {
         Ok(()) // TODO
     }
