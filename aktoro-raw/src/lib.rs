@@ -8,14 +8,19 @@ mod context;
 pub mod actor;
 
 /// TODO: documentation
+pub mod channel;
+
+/// TODO: documentation
 pub mod handler;
 
 /// TODO: documentation
 pub mod runtime;
 
-pub use actor::Actor;
-pub use context::Context;
-pub use handler::action;
-pub use handler::event;
-pub use handler::message;
-pub use runtime::Runtime;
+pub use self::actor::Actor;
+pub use self::channel::Receiver;
+pub use self::channel::Sender;
+pub use self::context::Context;
+pub use self::handler::action;
+pub use self::handler::event;
+pub use self::handler::message;
+pub use self::runtime::Runtime;
