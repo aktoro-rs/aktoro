@@ -1,6 +1,8 @@
 use std::error;
 
-use crate::actor::Actor;
+mod handle;
+
+pub use handle::Handle;
 
 /// TODO: module documentation
 
@@ -25,22 +27,17 @@ pub trait Runtime: Sized {
     }
 
     /// TODO: documentation
+    fn is_stopped(&self) -> bool;
+
+    /// TODO: documentation
     fn init_with(config: Self::Config) -> Result<Self, Self::Error>;
 
     /// TODO: documentation
-    fn handle(&self) -> Self::Handle;
+    fn handle(&self) -> Result<Self::Handle, Self::Error>;
 
     /// TODO: documentation
     fn wait(self) -> Result<(), Self::Error>;
 
     /// TODO: documentation
-    fn stop(self) -> Result<(), Self::Error>;
-}
-
-/// TODO: documentation
-pub trait Handle: Unpin + Clone + Send {
-    type Error: error::Error;
-
-    /// TODO: documentation
-    fn spawn<A: Actor>(&self) -> Result<(), Self::Error>;
+    fn stop(&self) -> Result<(), Self::Error>;
 }

@@ -30,9 +30,16 @@ impl raw::Runtime for Runtime {
 
     /// TODO: documentation
     ///
-    /// TODO(inner): create handle
-    fn handle(&self) -> Handle {
-        Handle
+    /// TODO(inner): *
+    fn is_stopped(&self) -> bool {
+        true // TODO
+    }
+
+    /// TODO: documentation
+    ///
+    /// TODO(inner): *
+    fn handle(&self) -> Result<Handle, Error> {
+        Ok(Handle) // TODO
     }
 
     /// TODO: documentation
@@ -45,7 +52,7 @@ impl raw::Runtime for Runtime {
     /// TODO: documentation
     ///
     /// TODO(inner): *
-    fn stop(self) -> Result<(), Error> {
+    fn stop(&self) -> Result<(), Error> {
         Ok(()) // TODO
     }
 }
@@ -56,7 +63,21 @@ impl raw::runtime::Handle for Handle {
     /// TODO: documentation
     ///
     /// TODO(inner): *
+    fn is_stopped(&self) -> bool {
+        true  // TODO
+    }
+
+    /// TODO: documentation
+    ///
+    /// TODO(inner): *
     fn spawn<A: raw::Actor>(&self) -> Result<(), Error> {
+        Ok(()) // TODO
+    }
+
+    /// TODO: documentation
+    ///
+    /// TODO(inner): *
+    fn stop(&self) -> Result<(), Error> {
         Ok(()) // TODO
     }
 }
