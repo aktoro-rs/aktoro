@@ -1,5 +1,7 @@
 use std::error;
 
+use crate::context::Context;
+
 mod handle;
 mod status;
 
@@ -11,7 +13,7 @@ pub use self::status::Status;
 /// TODO: documentation
 pub trait Actor: Unpin + Send + Sized {
     /// TODO: documentation
-    type Context;
+    type Context: Context<Self>;
 
     /// TODO: documentation
     type Status: Status<Self>;

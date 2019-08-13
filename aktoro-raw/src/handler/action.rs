@@ -6,9 +6,7 @@ use super::priority::Priority;
 /// TODO: documentation
 pub trait Action: Send {
     /// TODO: documentation
-    fn priority(&self) -> Priority {
-        Priority::new()
-    }
+    fn priority(&self) -> &Priority;
 }
 
 /// TODO: documentation

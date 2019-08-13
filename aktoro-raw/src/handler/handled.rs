@@ -6,7 +6,7 @@ pub struct Handled<A>
 where
     A: Actor,
 {
-    status: Option<A::Status>,
+    pub(crate) status: Option<A::Status>,
 }
 
 /// TODO: documentation
@@ -15,8 +15,8 @@ where
     A: Actor,
     O: Send,
 {
-    status: Option<A::Status>,
-    output: Option<O>,
+    pub(crate) status: Option<A::Status>,
+    pub(crate) output: Option<O>,
 }
 
 /// TODO: documentation
