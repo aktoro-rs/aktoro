@@ -16,25 +16,25 @@ pub(crate) fn new() -> (Notify, Received) {
     (Notify { sender, }, Received { recver, })
 }
 
-/// TODO/ documentation
+/// TODO: documentation
 pub struct Notify {
-    /// TODO/ documentation
+    /// TODO: documentation
     sender: Sender<()>,
 }
 
-/// TODO/ documentation
+/// TODO: documentation
 pub struct Received {
-    /// TODO/ documentation
+    /// TODO: documentation
     recver: Receiver<()>,
 }
 
 impl raw::channel::notification::Notify for Notify {
-    /// TODO/ documentation
+    /// TODO: documentation
 	type Received = Received;
 
 	type Error = Error;
 
-    /// TODO/ documentation
+    /// TODO: documentation
     fn notify(mut self) -> Result<(), Error> {
         self.sender.try_send(())
     }

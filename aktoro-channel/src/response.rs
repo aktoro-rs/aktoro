@@ -16,25 +16,25 @@ pub(crate) fn new<R>() -> (Respond<R>, Response<R>) {
     (Respond { sender, }, Response { recver, })
 }
 
-/// TODO/ documentation
+/// TODO: documentation
 pub struct Respond<R> {
-    /// TODO/ documentation
+    /// TODO: documentation
     sender: Sender<R>,
 }
 
-/// TODO/ documentation
+/// TODO: documentation
 pub struct Response<R> {
-    /// TODO/ documentation
+    /// TODO: documentation
     recver: Receiver<R>,
 }
 
 impl<R> raw::channel::response::Respond<R> for Respond<R> {
-    /// TODO/ documentation
+    /// TODO: documentation
 	type Response = Response<R>;
 
 	type Error = Error<R>;
 
-    /// TODO/ documentation
+    /// TODO: documentation
     fn send(mut self, response: R) -> Result<(), Error<R>> {
         self.sender.try_send(response)
     }

@@ -1,16 +1,16 @@
 use std::error;
 use std::future::Future;
 
-/// TODO/ documentation
+/// TODO: documentation
 pub trait Notify {
-    /// TODO/ documentation
+    /// TODO: documentation
 	type Received: Received;
 
 	type Error: error::Error;
 
-    /// TODO/ documentation
+    /// TODO: documentation
 	fn notify(self) -> Result<(), Self::Error>;
 }
 
-/// TODO/ documentation
+/// TODO: documentation
 pub trait Received: Future<Output = bool> {}
