@@ -1,37 +1,34 @@
 use std::error;
 
-use super::notify::Notify;
-use super::response::Response;
+use super::message::Message;
+use super::notification::Notify;
+use super::response::Respond;
 
 /// TODO: documentation
-pub trait Sender<M, R = ()>: Send
+pub trait Sender<M, I, O = ()>
 where
-    M: Send,
-    R: Send,
+	M: Message<I, O>,
 {
-    /// TODO: documentation
-    type Notify: Notify;
-
-    /// TODO: documentation
-    type Response: Response<R>;
-
     type Error: error::Error;
 
     /// TODO: documentation
-    fn try_send(&self, msg: M) -> Result<(), Self::Error>;
+    fn try_send(&self, msg: I) -> Result<(), Self::Error>;
 
     /// TODO: documentation
-    fn try_send_resp(&self, msg: M) -> Result<Self::Response, Self::Error>;
+    fn try_send_notifying(&self, msg: I) -> Result<<M::Notify as Notify>::Received, Self::Error>;
 
     /// TODO: documentation
-    fn try_send_notify(&self, msg: M) -> Result<Self::Notify, Self::Error>;
+    fn try_send_responding(&self, msg: I) -> Result<<M::Respond as Respond<O>>::Response, Self::Error>;
 
     /// TODO: documentation
-    fn close_channel(&self);
+    fn is_disconnected(&self) -> bool;
 
     /// TODO: documentation
-    fn is_closed(&self) -> bool;
+    fn is_closed(&self) -> Result<bool, Self::Error>;
+
+	/// TODO: documentation
+	fn disconnect(&mut self) -> Result<(), Self::Error>;
 
     /// TODO: documentation
-    fn disconnect(&self);
+    fn close_channel(&self) -> Result<(), Self::Error>;
 }

@@ -2,11 +2,12 @@ use std::error;
 
 use futures_core::Stream;
 
+use super::message::Message;
+
 /// TODO: documentation
-pub trait Receiver<M, R = ()>: Stream<Item = M> + Send
+pub trait Receiver<M, I, O = ()>: Stream<Item = M>
 where
-    M: Send,
-    R: Send,
+    M: Message<I, O>,
 {
     type Error: error::Error;
 
@@ -14,11 +15,11 @@ where
     fn try_recv(&self) -> Result<Option<M>, Self::Error>;
 
     /// TODO: documentation
-    fn close_channel(&self);
+    fn is_closed(&self) -> Result<bool, Self::Error>;
 
     /// TODO: documentation
-    fn is_closed(&self) -> bool;
+    fn disconnect(&mut self) -> Result<(), Self::Error>;
 
     /// TODO: documentation
-    fn disconnect(&self);
+    fn close_channel(&self) -> Result<(), Self::Error>;
 }

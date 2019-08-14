@@ -1,7 +1,7 @@
 [package]
 name        = "aktoro-channel"
 description = "Channels for aktoro's internal use."
-version     = "0.1.0-alpha.8"
+version     = "0.1.0-alpha.9"
 license     = "MIT"
 authors     = ["Matthieu Le Brazidec <matthieu@lebrazidec.email>"]
 edition     = "2018"
@@ -10,3 +10,7 @@ edition     = "2018"
 crossbeam-queue      = "0.1"
 crossbeam-utils      = "0.6"
 futures-core-preview = "0.3.0-alpha.18"
+
+[dependencies.aktoro-raw]
+path    = "../aktoro-raw"
+version = "0.1.0-alpha.5"

@@ -17,8 +17,7 @@ pub mod handler;
 pub mod runtime;
 
 pub use self::actor::Actor;
-pub use self::channel::Receiver;
-pub use self::channel::Sender;
+pub use self::channel::Channel;
 pub use self::context::Context;
 pub use self::handler::action;
 pub use self::handler::event;

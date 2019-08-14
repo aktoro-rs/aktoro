@@ -1,29 +1,31 @@
 use std::error;
 
-mod notify;
+mod message;
 mod receiver;
-mod response;
 mod sender;
 
+pub mod notification;
+pub mod response;
+
+pub use self::message::Message;
 pub use self::receiver::Receiver;
 pub use self::sender::Sender;
 
 /// TODO: module documentation
 
 /// TODO: documentation
-pub trait Channel<M, R = ()>: Sized
-where
-    M: Send,
-    R: Send,
-{
+pub trait Channel<I, O= ()>: Sized {
     /// TODO: documentation
     type Config: Default;
 
     /// TODO: documentation
-    type Sender: Sender<M, R>;
+    type Message: Message<I, O>;
 
     /// TODO: documentation
-    type Receiver: Receiver<M, R>;
+    type Sender: Sender<Self::Message, I, O>;
+
+    /// TODO: documentation
+    type Receiver: Receiver<Self::Message, I, O>;
 
     type Error: error::Error;
 

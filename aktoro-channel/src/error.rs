@@ -4,252 +4,118 @@ use std::fmt::Debug;
 use std::fmt::Display;
 use std::fmt::Formatter;
 
-#[derive(Eq, PartialEq, Clone, Debug)]
-/// An error occuring when calling
-/// the `try_clone` method of
-/// [`Sender`] or [`Receiver`].
-///
-/// [`Sender`]: struct.Sender.html#method.try_clone
-/// [`Receiver`]: struct.Receiver.html#method.try_clone
-pub struct CloneError {
-    kind: CloneErrorKind,
+/// TODO: documentation
+pub struct Error<T = ()> {
+    kind: ErrorKind<T>,
 }
 
-#[derive(Eq, PartialEq, Clone)]
-/// An error occuring while trying
-/// to send a message.
-pub struct TrySendError<T> {
-    kind: SendErrorKind,
-    msg: T,
+/// TODO: documentation
+pub enum ErrorKind<T = ()> {
+    /// TODO: documentation
+    Full(T),
+    /// TODO: documentation
+    SenderLimit,
+    /// TODO: documentation
+    ReceiverLimit,
+    /// TODO: documentation
+    MessageLimit(T),
+    /// TODO: documentation
+	Disconnected(Option<T>),
+    /// TODO: documentation
+    Closed(Option<T>),
+    /// TODO: documentation
+    Unsupported(Option<T>),
 }
 
-#[derive(Eq, PartialEq, Clone, Debug)]
-/// An error occuring while trying
-/// to receive a message.
-pub struct TryRecvError {
-    kind: RecvErrorKind,
-}
-
-#[derive(Eq, PartialEq, Clone, Debug)]
-pub enum CloneErrorKind {
-    /// The maximum number of sender or
-    /// receivers has already been reached.
-    Limit,
-    /// The sender or receiver is
-    /// disconnected from the channel.
-    Disconnected,
-}
-
-#[derive(Eq, PartialEq, Clone, Debug)]
-pub enum SendErrorKind {
-    /// The channel is bounded and its
-    /// buffer is full.
-    Full,
-    /// The maximum number of messages
-    /// that can be sent over the channel
-    /// has been reached.
-    Limit,
-    /// The sender is disconnected from
-    /// the channel.
-    Disconnected,
-    /// The channel is closed.
-    Closed,
-}
-
-#[derive(Eq, PartialEq, Clone, Debug)]
-pub enum RecvErrorKind {
-    /// The receiver is disconnected from
-    /// the channel.
-    Disconnected,
-    /// The channel is closed.
-    Closed,
-}
-
-impl CloneError {
-    /// Creates a new "limit reached"
-    /// error.
-    pub(crate) fn limit() -> Self {
-        CloneError {
-            kind: CloneErrorKind::Limit,
+/// TODO(methods): is_*
+/// TODO(method): kind
+/// TODO(method): into_kind
+impl<T> Error<T> {
+    /// TODO: documentation
+    pub(crate) fn full(value: T) -> Error<T> {
+        Error {
+            kind: ErrorKind::Full(value),
         }
     }
 
-    /// Creates a new "disconnected"
-    /// error.
-    pub(crate) fn disconnected() -> Self {
-        CloneError {
-            kind: CloneErrorKind::Disconnected,
+    /// TODO: documentation
+	pub(crate) fn sender_limit() -> Error<T> {
+		Error {
+			kind: ErrorKind::SenderLimit,
+		}
+	}
+
+    /// TODO: documentation
+	pub(crate) fn recver_limit() -> Error<T> {
+		Error {
+			kind: ErrorKind::ReceiverLimit,
+		}
+	}
+
+    /// TODO: documentation
+    pub(crate) fn msg_limit(value: T) -> Error<T> {
+        Error {
+            kind: ErrorKind::MessageLimit(value),
         }
     }
 
-    /// Whether the error occured
-    /// because the maximum number
-    /// of senders or receivers has
-    /// already been reached.
-    pub fn is_limit(&self) -> bool {
-        self.kind == CloneErrorKind::Limit
+    /// TODO: documentation
+    pub(crate) fn disconnected(value: Option<T>) -> Error<T> {
+        Error {
+            kind: ErrorKind::Disconnected(value),
+        }
     }
 
-    /// Whether the error occured
-    /// because the sender or receiver
-    /// is disconnected from the channel.
-    pub fn is_disconnected(&self) -> bool {
-        self.kind == CloneErrorKind::Disconnected
+    /// TODO: documentation
+    pub(crate) fn closed(value: Option<T>) -> Error<T> {
+        Error {
+            kind: ErrorKind::Closed(value),
+        }
     }
+
+    /// TODO: documentation
+    pub(crate) fn unsupported(value: Option<T>) -> Error<T> {
+        Error {
+            kind: ErrorKind::Unsupported(value)
+        }
+    }
+
+	/// TODO: documentation
+	pub(crate) fn map<M, U>(self, mapper: M) -> Error<U>
+	where
+		M: Fn(T) -> U,
+	{
+		match self.kind {
+			ErrorKind::Full(value) => Error::full(mapper(value)),
+			ErrorKind::SenderLimit => Error::sender_limit(),
+			ErrorKind::ReceiverLimit => Error::recver_limit(),
+			ErrorKind::MessageLimit(value) => Error::msg_limit(mapper(value)),
+			ErrorKind::Disconnected(Some(value)) => Error::disconnected(Some(mapper(value))),
+			ErrorKind::Disconnected(None) => Error::disconnected(None),
+			ErrorKind::Closed(Some(value)) => Error::closed(Some(mapper(value))),
+			ErrorKind::Closed(None) => Error::closed(None),
+			ErrorKind::Unsupported(Some(value)) => Error::unsupported(Some(mapper(value))),
+			ErrorKind::Unsupported(None) => Error::unsupported(None),
+		}
+	}
 }
 
-impl<T> TrySendError<T> {
-    /// Creates a new "channel full"
-    /// error.
-    pub(crate) fn full(msg: T) -> Self {
-        TrySendError {
-            kind: SendErrorKind::Full,
-            msg,
-        }
-    }
+impl<T> error::Error for Error<T> {}
 
-    /// Creates a new "limit reached"
-    /// error.
-    pub(crate) fn limit(msg: T) -> Self {
-        TrySendError {
-            kind: SendErrorKind::Limit,
-            msg,
-        }
-    }
-
-    /// Creates a new "disconnected"
-    /// error.
-    pub(crate) fn disconnected(msg: T) -> Self {
-        TrySendError {
-            kind: SendErrorKind::Disconnected,
-            msg,
-        }
-    }
-
-    /// Creates a new "channel closed"
-    /// error.
-    pub(crate) fn closed(msg: T) -> Self {
-        TrySendError {
-            kind: SendErrorKind::Closed,
-            msg,
-        }
-    }
-
-    /// Whether the error occured because
-    /// the channel's buffer is full.
-    pub fn is_full(&self) -> bool {
-        self.kind == SendErrorKind::Full
-    }
-
-    /// Whether the error occured because
-    /// the maximum number of messages
-    /// that can be sent over the channel
-    /// has already been reached.
-    pub fn is_limit(&self) -> bool {
-        self.kind == SendErrorKind::Limit
-    }
-
-    /// Whether the error occured because
-    /// the sender is disconnected from
-    /// the channel.
-    pub fn is_disconnected(&self) -> bool {
-        self.kind == SendErrorKind::Disconnected
-    }
-
-    /// Whether the error occured because
-    /// the channel is closed.
-    pub fn is_closed(&self) -> bool {
-        self.kind == SendErrorKind::Closed
-    }
-
-    /// Gets a reference to the message
-    /// that the sender was trying to
-    /// send.
-    pub fn msg(&self) -> &T {
-        &self.msg
-    }
-
-    /// Gets the message that the sender
-    /// was trying to send, consuming
-    /// the error.
-    pub fn into_msg(self) -> T {
-        self.msg
-    }
-}
-
-impl TryRecvError {
-    /// Creates a new "disconncted" error.
-    pub(crate) fn disconnected() -> Self {
-        TryRecvError {
-            kind: RecvErrorKind::Disconnected,
-        }
-    }
-
-    /// Creates a new "channel closed"
-    /// error.
-    pub(crate) fn closed() -> Self {
-        TryRecvError {
-            kind: RecvErrorKind::Closed,
-        }
-    }
-
-    /// Whether the error occured because
-    /// the receiver is disconnected from
-    /// the channel.
-    pub fn is_disconnected(&self) -> bool {
-        self.kind == RecvErrorKind::Disconnected
-    }
-
-    /// Whether the error occured because
-    /// the channel is closed.
-    pub fn is_closed(&self) -> bool {
-        self.kind == RecvErrorKind::Closed
-    }
-}
-
-impl error::Error for CloneError {}
-
-impl<T> error::Error for TrySendError<T> {}
-
-impl error::Error for TryRecvError {}
-
-impl Display for CloneError {
+impl<T> Display for Error<T> {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
-        match self.kind {
-            CloneErrorKind::Limit => write!(fmt, "clone failed because limit reached",),
-            CloneErrorKind::Disconnected => {
-                write!(fmt, "clone failed because already disconnected",)
-            }
-        }
+        Ok(()) // TODO
     }
 }
 
-impl<T> Display for TrySendError<T> {
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
-        match self.kind {
-            SendErrorKind::Full => write!(fmt, "send failed because channel full",),
-            SendErrorKind::Limit => write!(fmt, "send failed because limit reached",),
-            SendErrorKind::Disconnected => write!(fmt, "send failed because already disconnected",),
-            SendErrorKind::Closed => write!(fmt, "send failed because channel closed",),
-        }
-    }
+impl<T> Debug for Error<T> {
+	fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        Ok(()) // TODO
+	}
 }
 
-impl Display for TryRecvError {
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
-        match self.kind {
-            RecvErrorKind::Disconnected => {
-                write!(fmt, "receive failed because already disconnected",)
-            }
-            RecvErrorKind::Closed => write!(fmt, "receive failed because channel closed",),
-        }
-    }
-}
-
-impl<T> Debug for TrySendError<T> {
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
-        fmt.debug_struct("TrySendError")
-            .field("kind", &self.kind)
-            .finish()
-    }
+impl<T> Debug for ErrorKind<T> {
+	fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        Ok(()) // TODO
+	}
 }

@@ -1,38 +1,26 @@
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
-/// Counters used to store the number
-/// of senders, receivers, messages
-/// sent and the channel's limits.
+/// TODO: documentation
 pub(crate) struct Counters {
-    /// The number of messages sent
-    /// over the channel.
+    /// TODO: documentation
     cmsgs: Option<AtomicUsize>,
-    /// The number of senders
-    /// connected to the channel.
+    /// TODO: documentation
     csenders: AtomicUsize,
-    /// The number of receivers
-    /// connected to the channel.
+    /// TODO: documentation
     crecvers: AtomicUsize,
 
-    /// The number of messages that
-    /// can be sent over the channel
-    /// (in total).
+    /// TODO: documentation
     lmsgs: Option<usize>,
-    /// The maximum number of senders
-    /// that can be connected to the
-    /// channel.
+    /// TODO: documentation
     lsenders: Option<usize>,
-    /// The maximum number of
-    /// receivers that can be connected
-    /// to the channel.
+    /// TODO: documentation
     lrecvers: Option<usize>,
 }
 
 impl Counters {
-    /// Creates counters with the
-    /// specified limits.
-    pub(crate) fn new(msgs: Option<usize>, senders: Option<usize>, recvers: Option<usize>) -> Self {
+    /// TODO: documentation
+    pub(crate) fn new(msgs: Option<usize>, senders: Option<usize>, recvers: Option<usize>) -> Counters {
         Counters {
             cmsgs: msgs.map(|_| AtomicUsize::new(0)),
             csenders: AtomicUsize::new(0),
@@ -44,23 +32,16 @@ impl Counters {
         }
     }
 
-    /// Gets the current number of
-    /// senders connected to the channel.
+    /// TODO: documentation
     pub(crate) fn senders(&self) -> usize {
         self.csenders.load(Ordering::SeqCst)
     }
 
-    /// Increases the total number of
-    /// messages sent over the channel if
-    /// necessary.
+    /// TODO: documentation
     pub(crate) fn add_msg(&self) -> Result<(), ()> {
         if let Some(counter) = &self.cmsgs {
             let limit = self.lmsgs.unwrap();
 
-            // We CAS the sent messages
-            // counter to increase it of
-            // 1 or return an error if it
-            // is above the limit.
             loop {
                 let cur = counter.load(Ordering::SeqCst);
                 let new = cur + 1;
@@ -78,15 +59,8 @@ impl Counters {
         Ok(())
     }
 
-    /// Increases the counter for the
-    /// number of senders connected to the
-    /// channel.
+    /// TODO: documentation
     pub(crate) fn add_sender(&self) -> Result<(), ()> {
-        // If there is a limit for the number
-        // of senders connected to the channel,
-        // we CAS the counter to increase it of
-        // 1 and return an error if it is
-        // above the limit.
         if let Some(limit) = &self.lsenders {
             loop {
                 let cur = self.csenders.load(Ordering::SeqCst);
@@ -107,15 +81,8 @@ impl Counters {
         Ok(())
     }
 
-    /// Increases the counter for the
-    /// number of receivers connected to
-    /// the channel.
+    /// TODO: documentation
     pub(crate) fn add_recver(&self) -> Result<(), ()> {
-        // If there is a limit for the number
-        // or receivers that can be connected
-        // to the channel, we CAS the counter
-        // to increase it of 1 and return an
-        // error if it is above the limit.
         if let Some(limit) = &self.lrecvers {
             loop {
                 let cur = self.crecvers.load(Ordering::SeqCst);
@@ -136,11 +103,13 @@ impl Counters {
         Ok(())
     }
 
-    /// Decreases the number of senders,
-    /// returning the updated number.
+    /// TODO: documentation
     pub(crate) fn sub_sender(&self) -> usize {
         loop {
             let cur = self.csenders.load(Ordering::SeqCst);
+            if cur == 0 {
+                return cur;
+            }
 
             if self
                 .csenders
@@ -152,11 +121,13 @@ impl Counters {
         }
     }
 
-    /// Decreases the number of receivers,
-    /// returning the updated number.
+    /// TODO: documentation
     pub(crate) fn sub_recver(&self) -> usize {
         loop {
             let cur = self.crecvers.load(Ordering::SeqCst);
+            if cur == 0 {
+                return cur;
+            }
 
             if self
                 .crecvers

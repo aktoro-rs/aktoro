@@ -15,7 +15,7 @@ rand_xoshiro         = "0.2"
 
 [dependencies.aktoro-channel]
 path    = "../aktoro-channel"
-version = "0.1.0-alpha.8"
+version = "0.1.0-alpha.9"
 
 [dependencies.aktoro-raw]
 path    = "../aktoro-raw"

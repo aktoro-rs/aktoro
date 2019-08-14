@@ -2,15 +2,15 @@ use std::error;
 use std::future::Future;
 
 /// TODO/ documentation
-pub trait Respond<R> {
+pub trait Notify {
     /// TODO/ documentation
-	type Response: Response<R>;
+	type Received: Received;
 
 	type Error: error::Error;
 
     /// TODO/ documentation
-	fn send(self, response: R) -> Result<(), Self::Error>;
+	fn notify(self) -> Result<(), Self::Error>;
 }
 
 /// TODO/ documentation
-pub trait Response<R>: Future<Output = Option<R>> {}
+pub trait Received: Future<Output = bool> {}
